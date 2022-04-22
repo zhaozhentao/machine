@@ -1,4 +1,4 @@
-package com.example.restservice;
+package machine;
 
 import cn.hutool.core.io.IoUtil;
 import org.springframework.boot.ApplicationArguments;
