@@ -1,11 +1,10 @@
 plugins {
-	id 'org.springframework.boot' version '2.6.6'
-	id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+	id "com.github.johnrengelman.shadow" version "7.1.2"
 	id 'java'
 }
 
-group = 'machine'
-version = '0.0.1'
+group = 'tensorflow'
+version = '0.4.1'
 sourceCompatibility = '1.8'
 
 repositories {
@@ -14,8 +13,6 @@ repositories {
 
 dependencies {
 	implementation fileTree(dir: 'libs', include: '*.jar')
-	implementation 'org.springframework.boot:spring-boot-starter-web'
-	implementation 'cn.hutool:hutool-all:5.7.22'
 	implementation 'org.tensorflow:ndarray:0.3.3'
 	implementation 'com.google.protobuf:protobuf-java:3.20.1'
 	implementation 'org.bytedeco:javacpp:1.5.7'
