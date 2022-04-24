@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import org.tensorflow.Graph;
 import org.tensorflow.Session;
 import org.tensorflow.Tensor;
+import org.tensorflow.TensorFlow;
 import org.tensorflow.op.Ops;
 import org.tensorflow.op.dtypes.Cast;
 import org.tensorflow.op.image.DecodeJpeg;
@@ -24,6 +25,8 @@ public class OnAppStarted implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws IOException {
+        System.out.println("Tensorflow version " + TensorFlow.version());
+
         byte[] pbBytes = IoUtil.readBytes(Files.newInputStream(Paths.get("./model.pb")));
 
         Graph img = new Graph();

@@ -16,7 +16,4 @@ dependencies {
 	implementation fileTree(dir: 'libs', include: '*.jar')
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'cn.hutool:hutool-all:5.7.22'
-	implementation 'org.tensorflow:ndarray:0.3.3'
-	implementation 'com.google.protobuf:protobuf-java:3.20.1'
-	implementation 'org.bytedeco:javacpp:1.5.7'
 }
