@@ -30,14 +30,12 @@ public class OnAppStarted implements ApplicationRunner {
         byte[] pbBytes = IoUtil.readBytes(Files.newInputStream(Paths.get("./model.pb")));
 
         Graph img = new Graph();
-        Session imgSession = new Session(img);
-
         Ops tf = Ops.create(img);
         ReadFile fileOp = tf.io.readFile(tf.constant("./four.jpeg"));
         DecodeJpeg jpegOp = tf.image.decodeJpeg(fileOp.contents(), DecodeJpeg.channels(1L));
         Cast<TFloat32> floatOp = tf.dtypes.cast(jpegOp, TFloat32.class);
         Div<TFloat32> normalOp = tf.math.div(floatOp, tf.constant(255.0f));
-        Tensor image = imgSession.runner().fetch(normalOp).run().get(0);
+        Tensor image = new Session(img).runner().fetch(normalOp).run().get(0);
 
         Graph graph = new Graph();
         graph.importGraphDef(GraphDef.parseFrom(pbBytes));
