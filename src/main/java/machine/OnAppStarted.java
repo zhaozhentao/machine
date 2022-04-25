@@ -26,16 +26,15 @@ public class OnAppStarted implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) throws IOException {
         System.out.println("Tensorflow version " + TensorFlow.version());
+        var pbBytes = IoUtil.readBytes(Files.newInputStream(Paths.get("./model.pb")));
 
-        byte[] pbBytes = IoUtil.readBytes(Files.newInputStream(Paths.get("./model.pb")));
-
-        Graph img = new Graph();
-        Ops tf = Ops.create(img);
-        ReadFile fileOp = tf.io.readFile(tf.constant("./four.jpeg"));
-        DecodeJpeg jpegOp = tf.image.decodeJpeg(fileOp.contents(), DecodeJpeg.channels(1L));
-        Cast<TFloat32> floatOp = tf.dtypes.cast(jpegOp, TFloat32.class);
-        Div<TFloat32> normalOp = tf.math.div(floatOp, tf.constant(255.0f));
-        Tensor image = new Session(img).runner().fetch(normalOp).run().get(0);
+        var img = new Graph();
+        var tf = Ops.create(img);
+        var fileOp = tf.io.readFile(tf.constant("./four.jpeg"));
+        var jpegOp = tf.image.decodeJpeg(fileOp.contents(), DecodeJpeg.channels(1L));
+        var floatOp = tf.dtypes.cast(jpegOp, TFloat32.class);
+        var normalOp = tf.math.div(floatOp, tf.constant(255.0f));
+        var image = new Session(img).runner().fetch(normalOp).run().get(0);
 
         Graph graph = new Graph();
         graph.importGraphDef(GraphDef.parseFrom(pbBytes));
@@ -52,5 +51,16 @@ public class OnAppStarted implements ApplicationRunner {
         for (int i = 0; i < 10; i++) {
             System.out.println("number: " + i + " probability: " + resultF[i]);
         }
+
+
+        Graph img2 = new Graph();
+        Ops tf2 = Ops.create(img2);
+        ReadFile fileOp2 = tf2.io.readFile(tf2.constant("./plate.jpeg"));
+        DecodeJpeg jpegOp2 = tf2.image.decodeJpeg(fileOp2.contents(), DecodeJpeg.channels(3L));
+        Cast<TFloat32> floatOp2 = tf2.dtypes.cast(jpegOp2, TFloat32.class);
+        Div<TFloat32> normalOp2 = tf2.math.div(floatOp2, tf2.constant(255.0f));
+        Tensor image2 = new Session(img2).runner().fetch(normalOp2).run().get(0);
+
+        System.out.println(image2.shape());
     }
 }
