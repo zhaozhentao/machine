@@ -23,13 +23,15 @@ public class OnAppStarted implements ApplicationRunner {
     public void run(ApplicationArguments args) throws IOException {
         System.out.println("Tensorflow version " + TensorFlow.version());
 
-        var img = new Graph();
-        var tf = Ops.create(img);
+        numberRecognize();
+    }
+
+    private void numberRecognize() throws IOException {
+        var tf = Ops.create();
         var fileOp = tf.io.readFile(tf.constant("./four.jpeg"));
         var jpegOp = tf.image.decodeJpeg(fileOp.contents(), DecodeJpeg.channels(1L));
         var floatOp = tf.dtypes.cast(jpegOp, TFloat32.class);
-        var normalOp = tf.math.div(floatOp, tf.constant(255.0f));
-        var image = new Session(img).runner().fetch(normalOp).run().get(0);
+        var image = tf.math.div(floatOp, tf.constant(255.0f)).asTensor();
 
         var graph = new Graph();
         var pbBytes = IoUtil.readBytes(Files.newInputStream(Paths.get("./model.pb")));
