@@ -57,38 +57,34 @@ public class OnAppStarted implements ApplicationRunner {
 
             graph.importGraphDef(GraphDef.parseFrom(pbBytes));
 
-            for (int i = 0; i < 3; i++) {
-                var begin = System.currentTimeMillis();
-                var resultTensor = session.runner()
-                    .feed("Input", image)
-                    .fetch("Identity")
-                    .fetch("Identity_1")
-                    .fetch("Identity_2")
-                    .fetch("Identity_3")
-                    .fetch("Identity_4")
-                    .fetch("Identity_5")
-                    .fetch("Identity_6")
-                    .fetch("Identity_7")
-                    .run();
-                System.out.println(System.currentTimeMillis() - begin);
+            var resultTensor = session.runner()
+                .feed("Input", image)
+                .fetch("Identity")
+                .fetch("Identity_1")
+                .fetch("Identity_2")
+                .fetch("Identity_3")
+                .fetch("Identity_4")
+                .fetch("Identity_5")
+                .fetch("Identity_6")
+                .fetch("Identity_7")
+                .run();
 
-                var plate = resultTensor.stream().map(t -> {
-                    float[] r = new float[(int) t.shape().asArray()[1]];
-                    t.asRawTensor().data().asFloats().read(r);
-                    t.close();
-                    return chars[findMax(r)];
-                }).collect(Collectors.joining());
+            var plate = resultTensor.stream().map(t -> {
+                var r = new float[(int) t.shape().asArray()[1]];
+                t.asRawTensor().data().asFloats().read(r);
+                t.close();
+                return chars[findMax(r)];
+            }).collect(Collectors.joining());
 
-                System.out.println(plate);
-            }
+            System.out.println(plate);
         }
     }
 
     private int findMax(float[] array) {
         if (array == null || array.length == 0) return -1;
 
-        int largest = 0;
-        for (int i = 1; i < array.length; i++) {
+        var largest = 0;
+        for (var i = 1; i < array.length; i++) {
             if (array[i] > array[largest]) largest = i;
         }
         return largest;
