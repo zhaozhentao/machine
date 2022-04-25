@@ -22,7 +22,6 @@ public class OnAppStarted implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) throws IOException {
         System.out.println("Tensorflow version " + TensorFlow.version());
-        var pbBytes = IoUtil.readBytes(Files.newInputStream(Paths.get("./model.pb")));
 
         var img = new Graph();
         var tf = Ops.create(img);
@@ -33,13 +32,10 @@ public class OnAppStarted implements ApplicationRunner {
         var image = new Session(img).runner().fetch(normalOp).run().get(0);
 
         var graph = new Graph();
+        var pbBytes = IoUtil.readBytes(Files.newInputStream(Paths.get("./model.pb")));
         graph.importGraphDef(GraphDef.parseFrom(pbBytes));
         var session = new Session(graph);
-        var result = session.runner()
-            .feed("Input", image)
-            .fetch("Identity")
-            .run()
-            .get(0);
+        var result = session.runner().feed("Input", image).fetch("Identity").run().get(0);
 
         var resultF = new float[10];
         result.asRawTensor().data().asFloats().read(resultF);
