@@ -34,32 +34,7 @@ public class OnAppStarted implements ApplicationRunner {
     public void run(ApplicationArguments args) throws IOException {
         System.out.println("Tensorflow version " + TensorFlow.version());
 
-        numberRecognize();
-
         carPlateRecognize();
-    }
-
-    private void numberRecognize() throws IOException {
-        var tf = Ops.create();
-        var fileOp = tf.io.readFile(tf.constant("./four.jpeg"));
-        var jpegOp = tf.image.decodeJpeg(fileOp.contents(), DecodeJpeg.channels(1L));
-        var floatOp = tf.dtypes.cast(jpegOp, TFloat32.class);
-        var image = tf.math.div(floatOp, tf.constant(255.0f)).asTensor();
-
-        try (
-            var graph = new Graph();
-            var session = new Session(graph)
-        ) {
-            var pbBytes = IoUtil.readBytes(Files.newInputStream(Paths.get("./model.pb")));
-            graph.importGraphDef(GraphDef.parseFrom(pbBytes));
-            var resultTensor = session.runner().feed("Input", image).fetch("Identity").run().get(0);
-
-            var result = new float[10];
-            resultTensor.asRawTensor().data().asFloats().read(result);
-            resultTensor.close();
-
-            for (int i = 0; i < 10; i++) System.out.println("number: " + i + " probability: " + result[i]);
-        }
     }
 
     private void carPlateRecognize() throws IOException {
