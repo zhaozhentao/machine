@@ -44,8 +44,6 @@ public class OnAppStarted implements ApplicationRunner {
         var resultF = new float[10];
         result.asRawTensor().data().asFloats().read(resultF);
 
-        for (int i = 0; i < 10; i++) {
-            System.out.println("number: " + i + " probability: " + resultF[i]);
-        }
+        for (int i = 0; i < 10; i++) System.out.println("number: " + i + " probability: " + resultF[i]);
     }
 }
