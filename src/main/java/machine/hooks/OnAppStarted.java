@@ -1,4 +1,4 @@
-package machine;
+package machine.hooks;
 
 import cn.hutool.core.io.IoUtil;
 import org.springframework.boot.ApplicationArguments;
