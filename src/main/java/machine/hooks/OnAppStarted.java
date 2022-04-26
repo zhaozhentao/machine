@@ -10,8 +10,10 @@ import org.tensorflow.Tensor;
 import org.tensorflow.TensorFlow;
 import org.tensorflow.op.Ops;
 import org.tensorflow.op.image.DecodeJpeg;
+import org.tensorflow.op.image.EncodeJpeg;
 import org.tensorflow.proto.framework.GraphDef;
 import org.tensorflow.types.TFloat32;
+import org.tensorflow.types.TUint8;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -44,7 +46,22 @@ public class OnAppStarted implements ApplicationRunner {
             var s = model(g, "./models/zc.pb");
             var image = imageTensor("./images/car.jpeg")
         ) {
+            if (s == null) return;
 
+            var result = (TFloat32) s.runner().feed("Input", image).fetch("Identity").run().get(0);
+            var shape = result.shape().asArray();
+
+            var imageGraph = new Graph();
+            var imageSession = new Session(imageGraph);
+            var tf = Ops.create(imageGraph);
+
+            var unNormal = tf.math.mul(tf.constant(result), tf.constant(255.0f));
+            var maskFloat = tf.reshape(unNormal, tf.array(shape[1], shape[2], shape[3]));
+            var maskInt = tf.dtypes.cast(maskFloat, TUint8.class);
+            var jpeg = tf.image.encodeJpeg(maskInt, EncodeJpeg.quality(100L));
+            var writeFile = tf.io.writeFile(tf.constant("./mask.jpeg"), jpeg);
+
+            imageSession.runner().addTarget(writeFile).run();
         }
     }
 
@@ -87,6 +104,7 @@ public class OnAppStarted implements ApplicationRunner {
         } catch (Exception e) {
             e.printStackTrace();
         }
+
         return null;
     }
 
