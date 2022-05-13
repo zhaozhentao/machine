@@ -1,5 +1,6 @@
 package machine.hooks;
 
+import cn.hutool.core.img.ImgUtil;
 import cn.hutool.core.io.IoUtil;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
@@ -53,29 +54,24 @@ public class OnAppStarted implements ApplicationRunner {
         try (
             var g = new Graph();
             var s = model(g, "./models/detect.pb");
-            var image = imageTensor("./images/car.jpeg")
+            var image = openCVImage2Tensor("./images/car.jpeg", 625, 625)
         ) {
             if (s == null) return;
 
-            var tensors = s.runner()
-                .feed("input_1", image)
-                .fetch("output_1")
-                .fetch("output_2")
-                .run();
+            var resultTensor = s.runner()
+                .feed("Input", image)
+                .fetch("Identity")
+                .run().get(0);
 
-            for (var output : tensors) {
-                var shape = output.shape().asArray();
-                var r = new float[(int) (shape[0] * shape[1] * shape[2])];
+            var coordinates = new float[8];
+            resultTensor.asRawTensor().data().asFloats().read(coordinates);
 
-                output.asRawTensor().data().asFloats().read(r);
+            for (int i = 0; i < 4; i++) {
+                float x = coordinates[2 * i] * 625;
+                float y = coordinates[2 * i + 1] * 625;
+
+                System.out.println("x:" + x + " y:" + y);
             }
-//            var coordinates = new float[8];
-//            result.asRawTensor().data().asFloats().read(coordinates);
-//
-//            for (int i = 0; i < 4; i++) {
-//                float x = coordinates[2 * i] * 625;
-//                float y = coordinates[2 * i + 1] * 625;
-//            }
         }
     }
 
