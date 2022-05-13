@@ -2,6 +2,10 @@ package machine.hooks;
 
 import cn.hutool.core.io.IoUtil;
 import org.opencv.core.Core;
+import org.opencv.core.Mat;
+import org.opencv.core.Size;
+import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
@@ -9,10 +13,15 @@ import org.tensorflow.Graph;
 import org.tensorflow.Session;
 import org.tensorflow.Tensor;
 import org.tensorflow.TensorFlow;
+import org.tensorflow.ndarray.ByteNdArray;
+import org.tensorflow.ndarray.NdArrays;
+import org.tensorflow.ndarray.Shape;
+import org.tensorflow.ndarray.buffer.DataBuffers;
 import org.tensorflow.op.Ops;
 import org.tensorflow.op.image.DecodeJpeg;
 import org.tensorflow.proto.framework.GraphDef;
 import org.tensorflow.types.TFloat32;
+import org.tensorflow.types.TUint8;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -37,6 +46,8 @@ public class OnAppStarted implements ApplicationRunner {
 
         carPlateDetect();
 
+        openCVImage();
+
         System.out.println("finish");
     }
 
@@ -48,15 +59,25 @@ public class OnAppStarted implements ApplicationRunner {
         ) {
             if (s == null) return;
 
-            var result = (TFloat32) s.runner().feed("Input", image).fetch("Identity").run().get(0);
-            var coordinates = new float[8];
-            result.asRawTensor().data().asFloats().read(coordinates);
+            var tensors = s.runner()
+                .feed("input_1", image)
+                .fetch("output_1")
+                .fetch("output_2")
+                .run();
 
-            for (int i = 0; i < 4; i++) {
-                float x = coordinates[2 * i] * 625;
-                float y = coordinates[2 * i + 1] * 625;
+            for (var output : tensors) {
+                var shape = output.shape().asArray();
+                var r = new float[(int) (shape[0] * shape[1] * shape[2])];
+
+                output.asRawTensor().data().asFloats().read(r);
             }
-
+//            var coordinates = new float[8];
+//            result.asRawTensor().data().asFloats().read(coordinates);
+//
+//            for (int i = 0; i < 4; i++) {
+//                float x = coordinates[2 * i] * 625;
+//                float y = coordinates[2 * i + 1] * 625;
+//            }
         }
     }
 
@@ -89,6 +110,30 @@ public class OnAppStarted implements ApplicationRunner {
 
             System.out.println(plate);
         }
+    }
+
+    private void openCVImage() {
+        var resized = new Mat();
+        Imgproc.resize(Imgcodecs.imread("./images/car.jpeg"), resized, new Size(625, 625));
+
+        byte[] buff = new byte[(int) (resized.total() * resized.channels())];
+        resized.get(0, 0, buff);
+
+        Shape arrayShape = Shape.of(625, 625, 3);
+        ByteNdArray byteNdArray = NdArrays.wrap(arrayShape, DataBuffers.of(buff, true, false));
+
+        var g = new Graph();
+        var s = new Session(g);
+
+        var tf = Ops.create(g);
+        var floatOp = tf.dtypes.cast(tf.constant(byteNdArray), TFloat32.class);
+
+//        var normal = tf.math.div(floatOp, tf.constant(255.0f));
+
+        var intOp = tf.dtypes.cast(floatOp, TUint8.class);
+        var jpeg = tf.image.encodeJpeg(intOp);
+        var write = tf.io.writeFile(tf.constant("./haha.jpg"), jpeg);
+        s.runner().addTarget(write).run();
     }
 
     private Session model(Graph g, String path) {
