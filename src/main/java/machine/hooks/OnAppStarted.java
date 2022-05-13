@@ -21,7 +21,6 @@ import org.tensorflow.op.Ops;
 import org.tensorflow.op.image.DecodeJpeg;
 import org.tensorflow.proto.framework.GraphDef;
 import org.tensorflow.types.TFloat32;
-import org.tensorflow.types.TUint8;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -45,8 +44,6 @@ public class OnAppStarted implements ApplicationRunner {
         carPlateRecognize();
 
         carPlateDetect();
-
-        openCVImage();
 
         System.out.println("finish");
     }
@@ -85,7 +82,7 @@ public class OnAppStarted implements ApplicationRunner {
         try (
             var g = new Graph();
             var s = model(g, "./models/plate.pb");
-            var image = imageTensor("./images/plate.jpeg")
+            var image = openCVImage("./images/plate.jpeg", 240, 80)
         ) {
             if (s == null) return;
 
@@ -112,30 +109,6 @@ public class OnAppStarted implements ApplicationRunner {
         }
     }
 
-    private void openCVImage() {
-        var resized = new Mat();
-        Imgproc.resize(Imgcodecs.imread("./images/car.jpeg"), resized, new Size(625, 625));
-
-        byte[] buff = new byte[(int) (resized.total() * resized.channels())];
-        resized.get(0, 0, buff);
-
-        Shape arrayShape = Shape.of(625, 625, 3);
-        ByteNdArray byteNdArray = NdArrays.wrap(arrayShape, DataBuffers.of(buff, true, false));
-
-        var g = new Graph();
-        var s = new Session(g);
-
-        var tf = Ops.create(g);
-        var floatOp = tf.dtypes.cast(tf.constant(byteNdArray), TFloat32.class);
-
-//        var normal = tf.math.div(floatOp, tf.constant(255.0f));
-
-        var intOp = tf.dtypes.cast(floatOp, TUint8.class);
-        var jpeg = tf.image.encodeJpeg(intOp);
-        var write = tf.io.writeFile(tf.constant("./haha.jpg"), jpeg);
-        s.runner().addTarget(write).run();
-    }
-
     private Session model(Graph g, String path) {
         try {
             var pbBytes = IoUtil.readBytes(Files.newInputStream(Paths.get(path)));
@@ -146,6 +119,23 @@ public class OnAppStarted implements ApplicationRunner {
         }
 
         return null;
+    }
+
+    private Tensor openCVImage(String path, int width, int height) {
+        var resized = new Mat();
+        Imgproc.resize(Imgcodecs.imread(path), resized, new Size(width, height));
+
+        byte[] buff = new byte[(int) (resized.total() * resized.channels())];
+        resized.get(0, 0, buff);
+
+        Shape arrayShape = Shape.of(width, height, 3);
+        ByteNdArray byteNdArray = NdArrays.wrap(arrayShape, DataBuffers.of(buff, true, false));
+
+        var tf = Ops.create();
+        var floatOp = tf.dtypes.cast(tf.constant(byteNdArray), TFloat32.class);
+        var normal = tf.math.div(floatOp, tf.constant(255.0f));
+        var reshape = tf.reshape(normal, tf.array(1, width, height, 3));
+        return reshape.asTensor();
     }
 
     private Tensor imageTensor(String path) {
