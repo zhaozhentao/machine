@@ -2,9 +2,8 @@ package machine.hooks;
 
 import cn.hutool.core.img.ImgUtil;
 import cn.hutool.core.io.IoUtil;
-import org.opencv.core.Core;
-import org.opencv.core.Mat;
-import org.opencv.core.Size;
+import org.opencv.core.*;
+import org.opencv.core.Point;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.springframework.boot.ApplicationArguments;
@@ -25,6 +24,7 @@ import java.awt.*;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 import static org.opencv.imgproc.Imgproc.COLOR_BGR2RGB;
@@ -50,10 +50,12 @@ public class OnAppStarted implements ApplicationRunner {
     }
 
     private void carPlateDetect() {
+        int IMG_SIZE = 625;
+
         try (
             var g = new Graph();
             var s = model(g, "./models/detect.pb");
-            var image = openCVImage2Tensor("./images/car.jpeg", 625, 625)
+            var image = openCVImage2Tensor("./images/car.jpeg", IMG_SIZE, IMG_SIZE)
         ) {
             if (s == null) return;
 
@@ -62,20 +64,36 @@ public class OnAppStarted implements ApplicationRunner {
             var coordinates = new float[8];
             resultTensor.asRawTensor().data().asFloats().read(coordinates);
 
-            for (int i = 0; i < 4; i++) {
-                coordinates[2 * i] = coordinates[2 * i] * 625;
-                coordinates[2 * i + 1] = coordinates[2 * i + 1] * 625;
+            ArrayList<Point> points = new ArrayList<>();
+            for (int i = 0; i < 4; i++)
+                points.add(new Point(coordinates[2 * i] * IMG_SIZE, coordinates[2 * i + 1] * IMG_SIZE));
 
-                System.out.println("x:" + coordinates[2 * i] + " y:" + coordinates[2 * i + 1]);
-            }
+            // 根据x y分别找出左上 左下，右上，右下四个点
+            points.sort((o1, o2) -> (int) (o1.x - o2.x));
+            var lefts = points.subList(0, 2);
+            lefts.sort((o1, o2) -> (int) (o1.y - o2.y));
+            var leftTop = lefts.get(0);
+            var leftBottom = lefts.get(1);
 
-            var x = coordinates[0];
-            var y = coordinates[1];
-            var width = coordinates[4] - x;
-            var height = coordinates[5] - y;
+            var rights = points.subList(2, 4);
+            rights.sort((o1, o2) -> (int) (o1.y - o2.y));
+            var rightTop = rights.get(0);
+            var rightBottom = rights.get(1);
 
-            System.out.println("x:" + x + " y:" + y + " width:" + width + " height:" + height);
-            ImgUtil.cut(new File("./haha.jpg"), new File("./cut.jpg"), new Rectangle(116, 250, 384, 65));
+            var transform = Imgproc.getPerspectiveTransform(
+                new MatOfPoint2f(leftTop, rightTop, leftBottom, rightBottom),
+                new MatOfPoint2f(new Point(0, 0), new Point(240, 0), new Point(0, 80), new Point(240, 80))
+            );
+
+            var src = Imgcodecs.imread("./images/car.jpeg");
+
+            var resized = new Mat();
+            Imgproc.resize(src, resized, new Size(IMG_SIZE, IMG_SIZE));
+
+            Mat dest = new Mat(240, 80, CvType.CV_8UC3);
+            Imgproc.warpPerspective(resized, dest, transform, new Size(240, 80));
+
+            Imgcodecs.imwrite("./cut.jpg", dest);
         }
     }
 
