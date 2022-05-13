@@ -18,10 +18,11 @@ import org.tensorflow.ndarray.NdArrays;
 import org.tensorflow.ndarray.Shape;
 import org.tensorflow.ndarray.buffer.DataBuffers;
 import org.tensorflow.op.Ops;
-import org.tensorflow.op.image.DecodeJpeg;
 import org.tensorflow.proto.framework.GraphDef;
 import org.tensorflow.types.TFloat32;
 
+import java.awt.*;
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.stream.Collectors;
@@ -46,8 +47,6 @@ public class OnAppStarted implements ApplicationRunner {
         carPlateRecognize();
 
         carPlateDetect();
-
-        System.out.println("finish");
     }
 
     private void carPlateDetect() {
@@ -58,20 +57,25 @@ public class OnAppStarted implements ApplicationRunner {
         ) {
             if (s == null) return;
 
-            var resultTensor = s.runner()
-                .feed("Input", image)
-                .fetch("Identity")
-                .run().get(0);
+            var resultTensor = s.runner().feed("Input", image).fetch("Identity").run().get(0);
 
             var coordinates = new float[8];
             resultTensor.asRawTensor().data().asFloats().read(coordinates);
 
             for (int i = 0; i < 4; i++) {
-                float x = coordinates[2 * i] * 625;
-                float y = coordinates[2 * i + 1] * 625;
+                coordinates[2 * i] = coordinates[2 * i] * 625;
+                coordinates[2 * i + 1] = coordinates[2 * i + 1] * 625;
 
-                System.out.println("x:" + x + " y:" + y);
+                System.out.println("x:" + coordinates[2 * i] + " y:" + coordinates[2 * i + 1]);
             }
+
+            var x = coordinates[0];
+            var y = coordinates[1];
+            var width = coordinates[4] - x;
+            var height = coordinates[5] - y;
+
+            System.out.println("x:" + x + " y:" + y + " width:" + width + " height:" + height);
+            ImgUtil.cut(new File("./haha.jpg"), new File("./cut.jpg"), new Rectangle(116, 250, 384, 65));
         }
     }
 
@@ -124,34 +128,18 @@ public class OnAppStarted implements ApplicationRunner {
 
         var resized = new Mat();
         Imgproc.resize(rgb, resized, new Size(width, height));
+        var channel = resized.channels();
 
-        var imageBytes = new byte[(int) (resized.total() * resized.channels())];
+        var imageBytes = new byte[(int) (resized.total() * channel)];
         resized.get(0, 0, imageBytes);
 
-        var imageNdArray = NdArrays.wrap(Shape.of(height, width, 3), DataBuffers.of(imageBytes, true, false));
+        var imageNdArray = NdArrays.wrap(Shape.of(height, width, channel), DataBuffers.of(imageBytes, true, false));
 
         var tf = Ops.create();
         var floatOp = tf.dtypes.cast(tf.constant(imageNdArray), TFloat32.class);
         var normal = tf.math.div(floatOp, tf.constant(255.0f));
-        var reshape = tf.reshape(normal, tf.array(1, height, width, 3));
+        var reshape = tf.reshape(normal, tf.array(1, height, width, channel));
         return reshape.asTensor();
-    }
-
-    private Tensor imageTensor(String path) {
-        try (
-            var g = new Graph();
-            var s = new Session(g)
-        ) {
-            var tf = Ops.create(g);
-            var file = tf.io.readFile(tf.constant(path));
-            var jpeg = tf.image.decodeJpeg(file.contents(), DecodeJpeg.channels(3L));
-            var floatOp = tf.dtypes.cast(jpeg, TFloat32.class);
-            var normal = tf.math.div(floatOp, tf.constant(255.0f));
-            var shape = s.runner().fetch(normal).run().get(0).shape();
-            var shapeArray = shape.asArray();
-            var reshape = tf.reshape(normal, tf.array(1, shapeArray[0], shapeArray[1], shapeArray[2]));
-            return s.runner().fetch(reshape).run().get(0);
-        }
     }
 
     private int findMax(float[] array) {
