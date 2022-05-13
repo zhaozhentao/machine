@@ -13,7 +13,6 @@ import org.tensorflow.Graph;
 import org.tensorflow.Session;
 import org.tensorflow.Tensor;
 import org.tensorflow.TensorFlow;
-import org.tensorflow.ndarray.ByteNdArray;
 import org.tensorflow.ndarray.NdArrays;
 import org.tensorflow.ndarray.Shape;
 import org.tensorflow.ndarray.buffer.DataBuffers;
@@ -25,6 +24,8 @@ import org.tensorflow.types.TFloat32;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.stream.Collectors;
+
+import static org.opencv.imgproc.Imgproc.COLOR_BGR2RGB;
 
 @Component
 public class OnAppStarted implements ApplicationRunner {
@@ -82,7 +83,7 @@ public class OnAppStarted implements ApplicationRunner {
         try (
             var g = new Graph();
             var s = model(g, "./models/plate.pb");
-            var image = openCVImage("./images/plate.jpeg", 240, 80)
+            var image = openCVImage2Tensor("./images/plate.jpeg", 240, 80)
         ) {
             if (s == null) return;
 
@@ -121,20 +122,22 @@ public class OnAppStarted implements ApplicationRunner {
         return null;
     }
 
-    private Tensor openCVImage(String path, int width, int height) {
+    private Tensor openCVImage2Tensor(String path, int width, int height) {
+        var rgb = new Mat();
+        Imgproc.cvtColor(Imgcodecs.imread(path), rgb, COLOR_BGR2RGB);
+
         var resized = new Mat();
-        Imgproc.resize(Imgcodecs.imread(path), resized, new Size(width, height));
+        Imgproc.resize(rgb, resized, new Size(width, height));
 
-        byte[] buff = new byte[(int) (resized.total() * resized.channels())];
-        resized.get(0, 0, buff);
+        var imageBytes = new byte[(int) (resized.total() * resized.channels())];
+        resized.get(0, 0, imageBytes);
 
-        Shape arrayShape = Shape.of(width, height, 3);
-        ByteNdArray byteNdArray = NdArrays.wrap(arrayShape, DataBuffers.of(buff, true, false));
+        var imageNdArray = NdArrays.wrap(Shape.of(height, width, 3), DataBuffers.of(imageBytes, true, false));
 
         var tf = Ops.create();
-        var floatOp = tf.dtypes.cast(tf.constant(byteNdArray), TFloat32.class);
+        var floatOp = tf.dtypes.cast(tf.constant(imageNdArray), TFloat32.class);
         var normal = tf.math.div(floatOp, tf.constant(255.0f));
-        var reshape = tf.reshape(normal, tf.array(1, width, height, 3));
+        var reshape = tf.reshape(normal, tf.array(1, height, width, 3));
         return reshape.asTensor();
     }
 
