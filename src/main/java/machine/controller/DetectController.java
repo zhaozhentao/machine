@@ -1,15 +1,16 @@
-package machine.hooks;
+package machine.controller;
 
+import cn.hutool.core.io.IoUtil;
 import machine.AutoCloseMat;
 import machine.models.ModelProvider;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
-import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import org.tensorflow.Tensor;
-import org.tensorflow.TensorFlow;
 import org.tensorflow.ndarray.NdArrays;
 import org.tensorflow.ndarray.Shape;
 import org.tensorflow.ndarray.buffer.DataBuffers;
@@ -17,13 +18,14 @@ import org.tensorflow.op.Ops;
 import org.tensorflow.types.TFloat32;
 
 import javax.annotation.Resource;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 import static org.opencv.imgproc.Imgproc.COLOR_BGR2RGB;
 
-@Component
-public class OnAppStarted implements ApplicationRunner {
+@RestController
+public class DetectController {
 
     private final String[] chars = new String[]{
         "京", "沪", "津", "渝", "冀", "晋", "蒙", "辽", "吉", "黑", "苏", "浙", "皖", "闽", "赣", "鲁", "豫", "鄂", "湘", "粤",
@@ -35,26 +37,24 @@ public class OnAppStarted implements ApplicationRunner {
     @Resource
     private ModelProvider p;
 
-    @Override
-    public void run(ApplicationArguments args) {
-        System.out.println("Tensorflow version " + TensorFlow.version());
+    @PostMapping("/car_plate")
+    public void detect(@RequestParam("file") MultipartFile file) throws IOException {
+        var image = formToImage(file);
 
-        carPlateDetect();
+        carPlateDetect(image);
     }
 
-    private void carPlateDetect() {
+    private void carPlateDetect(AutoCloseMat resizeImage) {
         var IMG_SIZE = 625;
         try (
-            var resizeImage = resizeImage("./images/car.jpeg", IMG_SIZE, IMG_SIZE);
+            resizeImage;
             var plateImage = new AutoCloseMat(240, 80, CvType.CV_8UC3);
             var image = openCVImage2Tensor(resizeImage);
-            var resultTensor = p.carPlateDetectSession
-                .runner()
-                .feed("Input", image)
-                .fetch("Identity")
-                .run()
-                .get(0)
         ) {
+            long a = System.currentTimeMillis();
+            var resultTensor = p.carPlateDetectSession.runner().feed("Input", image).fetch("Identity").run().get(0);
+            System.out.println("detect " + (System.currentTimeMillis() - a));
+
             var coordinates = new float[8];
             resultTensor.asRawTensor().data().asFloats().read(coordinates);
 
@@ -81,7 +81,11 @@ public class OnAppStarted implements ApplicationRunner {
 
             Imgproc.warpPerspective(resizeImage, plateImage, transform, new Size(240, 80));
 
+            Imgcodecs.imwrite("./cut.jpg", plateImage);
+
+            var begin = System.currentTimeMillis();
             carPlateRecognize(plateImage);
+            System.out.println("carPlateRecognize " + (System.currentTimeMillis() - begin));
         }
     }
 
@@ -110,13 +114,33 @@ public class OnAppStarted implements ApplicationRunner {
         }
     }
 
+    private AutoCloseMat formToImage(MultipartFile file) throws IOException {
+        var fileInputStream = file.getInputStream();
+        byte[] bytes = IoUtil.readBytes(fileInputStream);
+        var byteMap = new AutoCloseMat(1, bytes.length, CvType.CV_8UC1);
+
+        byteMap.put(0, 0, bytes);
+        Mat mat = Imgcodecs.imdecode(byteMap, Imgcodecs.IMREAD_COLOR);
+        byteMap.release();
+
+        var rgb = new AutoCloseMat();
+        Imgproc.cvtColor(mat, rgb, COLOR_BGR2RGB);
+
+        var resized = new AutoCloseMat();
+        Imgproc.resize(rgb, resized, new Size(625, 625));
+
+        return resized;
+    }
+
     private AutoCloseMat resizeImage(String path, int width, int height) {
+        var a = System.currentTimeMillis();
         try (var rgb = new AutoCloseMat()) {
             Imgproc.cvtColor(Imgcodecs.imread(path), rgb, COLOR_BGR2RGB);
 
             var resized = new AutoCloseMat();
             Imgproc.resize(rgb, resized, new Size(width, height));
 
+            System.out.println("resize image " + (System.currentTimeMillis() - a));
             return resized;
         }
     }
