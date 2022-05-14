@@ -38,22 +38,29 @@ public class OnAppStarted implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         System.out.println("Tensorflow version " + TensorFlow.version());
 
-        carPlateRecognize();
-
         carPlateDetect();
+
+        carPlateRecognize();
     }
 
     private void carPlateDetect() {
-        int IMG_SIZE = 625;
+        var IMG_SIZE = 625;
+        var resizeImage = resizeImage("./images/car.jpeg", IMG_SIZE, IMG_SIZE);
 
-        try (var image = openCVImage2Tensor("./images/car.jpeg", IMG_SIZE, IMG_SIZE)) {
-            var resultTensor = p.carPlateDetectSession.runner().feed("Input", image).fetch("Identity").run().get(0);
-
+        try (
+            var image = openCVImage2Tensor(resizeImage);
+            var resultTensor = p.carPlateDetectSession
+                .runner()
+                .feed("Input", image)
+                .fetch("Identity")
+                .run()
+                .get(0)
+        ) {
             var coordinates = new float[8];
             resultTensor.asRawTensor().data().asFloats().read(coordinates);
 
-            ArrayList<Point> points = new ArrayList<>();
-            for (int i = 0; i < 4; i++)
+            var points = new ArrayList<Point>();
+            for (var i = 0; i < 4; i++)
                 points.add(new Point(coordinates[2 * i] * IMG_SIZE, coordinates[2 * i + 1] * IMG_SIZE));
 
             // 根据x y分别找出左上 左下，右上，右下四个点
@@ -78,7 +85,7 @@ public class OnAppStarted implements ApplicationRunner {
             var resized = new Mat();
             Imgproc.resize(src, resized, new Size(IMG_SIZE, IMG_SIZE));
 
-            Mat dest = new Mat(240, 80, CvType.CV_8UC3);
+            var dest = new Mat(240, 80, CvType.CV_8UC3);
             Imgproc.warpPerspective(resized, dest, transform, new Size(240, 80));
 
             Imgcodecs.imwrite("./cut.jpg", dest);
@@ -86,7 +93,9 @@ public class OnAppStarted implements ApplicationRunner {
     }
 
     private void carPlateRecognize() {
-        try (var image = openCVImage2Tensor("./images/plate.jpeg", 240, 80)) {
+        var resizeImage = resizeImage("./images/plate.jpeg", 240, 80);
+
+        try (var image = openCVImage2Tensor(resizeImage)) {
             var result = p.carPlateRecognizeSession.runner().
                 feed("Input", image)
                 .fetch("Identity")
@@ -110,24 +119,30 @@ public class OnAppStarted implements ApplicationRunner {
         }
     }
 
-    private Tensor openCVImage2Tensor(String path, int width, int height) {
+    private Mat resizeImage(String path, int width, int height) {
         var rgb = new Mat();
         Imgproc.cvtColor(Imgcodecs.imread(path), rgb, COLOR_BGR2RGB);
 
         var resized = new Mat();
         Imgproc.resize(rgb, resized, new Size(width, height));
-        var channel = resized.channels();
 
-        var imageBytes = new byte[(int) (resized.total() * channel)];
-        resized.get(0, 0, imageBytes);
+        return resized;
+    }
 
+    private Tensor openCVImage2Tensor(Mat image) {
+        var channel = image.channels();
+
+        var imageBytes = new byte[(int) (image.total() * channel)];
+        image.get(0, 0, imageBytes);
+
+        var height = image.height();
+        var width = image.width();
         var imageNdArray = NdArrays.wrap(Shape.of(height, width, channel), DataBuffers.of(imageBytes, true, false));
 
         var tf = Ops.create();
         var floatOp = tf.dtypes.cast(tf.constant(imageNdArray), TFloat32.class);
-        var normal = tf.math.div(floatOp, tf.constant(255.0f));
-        var reshape = tf.reshape(normal, tf.array(1, height, width, channel));
-        return reshape.asTensor();
+        var normalOp = tf.math.div(floatOp, tf.constant(255.0f));
+        return tf.reshape(normalOp, tf.array(1, height, width, channel)).asTensor();
     }
 
     private int findMax(float[] array) {
