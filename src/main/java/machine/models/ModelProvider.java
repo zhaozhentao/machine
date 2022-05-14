@@ -21,7 +21,7 @@ public class ModelProvider {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 
         this.carPlateDetectSession = model("./models/detect.pb");
-        this.carPlateRecognizeSession = model("./models/plate.pb");
+        this.carPlateRecognizeSession = model("./models/ocr_model.pb");
     }
 
     private Session model(String path) {

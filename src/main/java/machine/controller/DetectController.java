@@ -14,12 +14,14 @@ import org.tensorflow.Tensor;
 import org.tensorflow.ndarray.NdArrays;
 import org.tensorflow.ndarray.Shape;
 import org.tensorflow.ndarray.buffer.DataBuffers;
+import org.tensorflow.ndarray.buffer.FloatDataBuffer;
 import org.tensorflow.op.Ops;
 import org.tensorflow.types.TFloat32;
 
 import javax.annotation.Resource;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.stream.Collectors;
 
 import static org.opencv.imgproc.Imgproc.COLOR_BGR2RGB;
@@ -27,12 +29,7 @@ import static org.opencv.imgproc.Imgproc.COLOR_BGR2RGB;
 @RestController
 public class DetectController {
 
-    private final String[] chars = new String[]{
-        "京", "沪", "津", "渝", "冀", "晋", "蒙", "辽", "吉", "黑", "苏", "浙", "皖", "闽", "赣", "鲁", "豫", "鄂", "湘", "粤",
-        "桂", "琼", "川", "贵", "云", "藏", "陕", "甘", "青", "宁", "新", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-        "A", "B", "C", "D", "E", "F", "G", "H", "J", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "U", "V", "W", "X",
-        "Y", "Z", ""
-    };
+    private final String[] chars = "京,沪,津,渝,冀,晋,蒙,辽,吉,黑,苏,浙,皖,闽,赣,鲁,豫,鄂,湘,粤,桂,琼,川,贵,云,藏,陕,甘,青,宁,新,0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F,G,H,J,K,L,M,N,P,Q,R,S,T,U,V,W,X,Y,Z,港,学,使,警,澳,挂,军,北,南,广,沈,兰,成,济,海,民,航,空".split(",");
 
     @Resource
     private ModelProvider p;
@@ -77,41 +74,47 @@ public class DetectController {
 
             var transform = Imgproc.getPerspectiveTransform(
                 new MatOfPoint2f(leftTop, rightTop, leftBottom, rightBottom),
-                new MatOfPoint2f(new Point(0, 0), new Point(240, 0), new Point(0, 80), new Point(240, 80))
+                new MatOfPoint2f(new Point(0, 0), new Point(144, 0), new Point(0, 40), new Point(144, 40))
             );
 
-            var plateImage = new AutoCloseMat(240, 80, CvType.CV_8UC3);
+            var plateImage = new AutoCloseMat(144, 40, CvType.CV_8UC3);
 
-            Imgproc.warpPerspective(resizeImage, plateImage, transform, new Size(240, 80));
+            Imgproc.warpPerspective(resizeImage, plateImage, transform, new Size(144, 40));
             Imgcodecs.imwrite("./cut.jpg", plateImage);
 
             return plateImage;
         }
     }
 
-    private String carPlateRecognize(AutoCloseMat plateImage) {
+    private Object carPlateRecognize(AutoCloseMat plateImage) {
         try (
             plateImage;
             var image = openCVImage2Tensor(plateImage)
         ) {
             var result = p.carPlateRecognizeSession.runner().
-                feed("Input", image)
-                .fetch("Identity")
-                .fetch("Identity_1")
-                .fetch("Identity_2")
-                .fetch("Identity_3")
-                .fetch("Identity_4")
-                .fetch("Identity_5")
-                .fetch("Identity_6")
-                .fetch("Identity_7")
-                .run();
+                feed("input_1:0", image)
+                .fetch("output_1")
+                .run().get(0);
 
-            return result.stream().map(t -> {
-                var r = new float[(int) t.shape().asArray()[1]];
-                t.asRawTensor().data().asFloats().read(r);
-                t.close();
-                return chars[findMax(r)];
-            }).collect(Collectors.joining());
+            var shape = result.shape().asArray();
+
+            var ndArray = NdArrays.wrap(
+                Shape.of(shape[0], shape[1], shape[2]),
+                result.asRawTensor().data().asFloats()
+            );
+
+            StringBuilder sb = new StringBuilder();
+            for (var i = 0; i < shape[0]; i++) {
+                var floatDataBuffer = DataBuffers.ofFloats(shape[2]);
+                ndArray.get(i).get(0).read(floatDataBuffer);
+                float[] floats = new float[(int) shape[2]];
+                floatDataBuffer.read(floats);
+                var index = findMax(floats);
+                if (index >= chars.length) continue;
+                sb.append(chars[index]);
+            }
+
+            return sb.toString();
         }
     }
 
