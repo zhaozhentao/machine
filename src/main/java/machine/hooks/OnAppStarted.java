@@ -1,29 +1,21 @@
 package machine.hooks;
 
-import cn.hutool.core.img.ImgUtil;
-import cn.hutool.core.io.IoUtil;
+import machine.models.ModelProvider;
 import org.opencv.core.*;
-import org.opencv.core.Point;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
-import org.tensorflow.Graph;
-import org.tensorflow.Session;
 import org.tensorflow.Tensor;
 import org.tensorflow.TensorFlow;
 import org.tensorflow.ndarray.NdArrays;
 import org.tensorflow.ndarray.Shape;
 import org.tensorflow.ndarray.buffer.DataBuffers;
 import org.tensorflow.op.Ops;
-import org.tensorflow.proto.framework.GraphDef;
 import org.tensorflow.types.TFloat32;
 
-import java.awt.*;
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 
@@ -39,9 +31,11 @@ public class OnAppStarted implements ApplicationRunner {
         "Y", "Z", ""
     };
 
+    @Resource
+    private ModelProvider p;
+
     @Override
     public void run(ApplicationArguments args) {
-        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
         System.out.println("Tensorflow version " + TensorFlow.version());
 
         carPlateRecognize();
@@ -52,14 +46,8 @@ public class OnAppStarted implements ApplicationRunner {
     private void carPlateDetect() {
         int IMG_SIZE = 625;
 
-        try (
-            var g = new Graph();
-            var s = model(g, "./models/detect.pb");
-            var image = openCVImage2Tensor("./images/car.jpeg", IMG_SIZE, IMG_SIZE)
-        ) {
-            if (s == null) return;
-
-            var resultTensor = s.runner().feed("Input", image).fetch("Identity").run().get(0);
+        try (var image = openCVImage2Tensor("./images/car.jpeg", IMG_SIZE, IMG_SIZE)) {
+            var resultTensor = p.carPlateDetectSession.runner().feed("Input", image).fetch("Identity").run().get(0);
 
             var coordinates = new float[8];
             resultTensor.asRawTensor().data().asFloats().read(coordinates);
@@ -98,14 +86,8 @@ public class OnAppStarted implements ApplicationRunner {
     }
 
     private void carPlateRecognize() {
-        try (
-            var g = new Graph();
-            var s = model(g, "./models/plate.pb");
-            var image = openCVImage2Tensor("./images/plate.jpeg", 240, 80)
-        ) {
-            if (s == null) return;
-
-            var result = s.runner().
+        try (var image = openCVImage2Tensor("./images/plate.jpeg", 240, 80)) {
+            var result = p.carPlateRecognizeSession.runner().
                 feed("Input", image)
                 .fetch("Identity")
                 .fetch("Identity_1")
@@ -126,18 +108,6 @@ public class OnAppStarted implements ApplicationRunner {
 
             System.out.println(plate);
         }
-    }
-
-    private Session model(Graph g, String path) {
-        try {
-            var pbBytes = IoUtil.readBytes(Files.newInputStream(Paths.get(path)));
-            g.importGraphDef(GraphDef.parseFrom(pbBytes));
-            return new Session(g);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return null;
     }
 
     private Tensor openCVImage2Tensor(String path, int width, int height) {
