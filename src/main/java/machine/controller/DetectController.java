@@ -117,19 +117,22 @@ public class DetectController {
     private AutoCloseMat formToImage(MultipartFile file) throws IOException {
         var fileInputStream = file.getInputStream();
         byte[] bytes = IoUtil.readBytes(fileInputStream);
-        var byteMap = new AutoCloseMat(1, bytes.length, CvType.CV_8UC1);
+        try (
+            fileInputStream;
+            var byteMap = new AutoCloseMat(1, bytes.length, CvType.CV_8UC1);
+            var rgb = new AutoCloseMat()
+        ) {
+            byteMap.put(0, 0, bytes);
+            Mat mat = Imgcodecs.imdecode(byteMap, Imgcodecs.IMREAD_COLOR);
 
-        byteMap.put(0, 0, bytes);
-        Mat mat = Imgcodecs.imdecode(byteMap, Imgcodecs.IMREAD_COLOR);
-        byteMap.release();
+            Imgproc.cvtColor(mat, rgb, COLOR_BGR2RGB);
+            mat.release();
 
-        var rgb = new AutoCloseMat();
-        Imgproc.cvtColor(mat, rgb, COLOR_BGR2RGB);
+            var resized = new AutoCloseMat();
+            Imgproc.resize(rgb, resized, new Size(625, 625));
 
-        var resized = new AutoCloseMat();
-        Imgproc.resize(rgb, resized, new Size(625, 625));
-
-        return resized;
+            return resized;
+        }
     }
 
     private AutoCloseMat resizeImage(String path, int width, int height) {
