@@ -135,19 +135,6 @@ public class DetectController {
         }
     }
 
-    private AutoCloseMat resizeImage(String path, int width, int height) {
-        var a = System.currentTimeMillis();
-        try (var rgb = new AutoCloseMat()) {
-            Imgproc.cvtColor(Imgcodecs.imread(path), rgb, COLOR_BGR2RGB);
-
-            var resized = new AutoCloseMat();
-            Imgproc.resize(rgb, resized, new Size(width, height));
-
-            System.out.println("resize image " + (System.currentTimeMillis() - a));
-            return resized;
-        }
-    }
-
     private Tensor openCVImage2Tensor(Mat image) {
         var channel = image.channels();
 
