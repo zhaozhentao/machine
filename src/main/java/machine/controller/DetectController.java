@@ -14,15 +14,14 @@ import org.tensorflow.Tensor;
 import org.tensorflow.ndarray.NdArrays;
 import org.tensorflow.ndarray.Shape;
 import org.tensorflow.ndarray.buffer.DataBuffers;
-import org.tensorflow.ndarray.buffer.FloatDataBuffer;
 import org.tensorflow.op.Ops;
 import org.tensorflow.types.TFloat32;
 
 import javax.annotation.Resource;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.stream.Collectors;
 
 import static org.opencv.imgproc.Imgproc.COLOR_BGR2RGB;
 
@@ -36,7 +35,10 @@ public class DetectController {
 
     @PostMapping("/car_plate")
     public Object detect(@RequestParam("file") MultipartFile file) throws IOException {
-        var image = formToImage(file);
+        File f = new File("./temp.jpg");
+        file.transferTo(f);
+
+        var image = formToImage(f);
 
         var plateImage = carPlateDetect(image);
 
@@ -47,9 +49,12 @@ public class DetectController {
         var IMG_SIZE = 625;
         try (
             resizeImage;
-            var image = openCVImage2Tensor(resizeImage);
         ) {
             long a = System.currentTimeMillis();
+            var image = openCVImage2Tensor(resizeImage);
+            System.out.println("openCVImage2Tensor " + (System.currentTimeMillis() - a));
+
+            a = System.currentTimeMillis();
             var resultTensor = p.carPlateDetectSession.runner().feed("Input", image).fetch("Identity").run().get(0);
             System.out.println("detect " + (System.currentTimeMillis() - a));
 
@@ -78,9 +83,7 @@ public class DetectController {
             );
 
             var plateImage = new AutoCloseMat(144, 40, CvType.CV_8UC3);
-
             Imgproc.warpPerspective(resizeImage, plateImage, transform, new Size(144, 40));
-            Imgcodecs.imwrite("./cut.jpg", plateImage);
 
             return plateImage;
         }
@@ -118,8 +121,8 @@ public class DetectController {
         }
     }
 
-    private AutoCloseMat formToImage(MultipartFile file) throws IOException {
-        var fileInputStream = file.getInputStream();
+    private AutoCloseMat formToImage(File file) throws IOException {
+        var fileInputStream = new FileInputStream(file);
         byte[] bytes = IoUtil.readBytes(fileInputStream);
         try (
             fileInputStream;
@@ -147,7 +150,7 @@ public class DetectController {
 
         var height = image.height();
         var width = image.width();
-        var imageNdArray = NdArrays.wrap(Shape.of(height, width, channel), DataBuffers.of(imageBytes, true, false));
+        var imageNdArray = NdArrays.wrap(Shape.of(height, width, channel), DataBuffers.of(imageBytes, true, true));
 
         var tf = Ops.create();
         var floatOp = tf.dtypes.cast(tf.constant(imageNdArray), TFloat32.class);
