@@ -1,5 +1,6 @@
 package machine.hooks;
 
+import machine.AutoCloseMat;
 import machine.models.ModelProvider;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -39,15 +40,13 @@ public class OnAppStarted implements ApplicationRunner {
         System.out.println("Tensorflow version " + TensorFlow.version());
 
         carPlateDetect();
-
-        carPlateRecognize();
     }
 
     private void carPlateDetect() {
         var IMG_SIZE = 625;
-        var resizeImage = resizeImage("./images/car.jpeg", IMG_SIZE, IMG_SIZE);
-
         try (
+            var resizeImage = resizeImage("./images/car.jpeg", IMG_SIZE, IMG_SIZE);
+            var plateImage = new AutoCloseMat(240, 80, CvType.CV_8UC3);
             var image = openCVImage2Tensor(resizeImage);
             var resultTensor = p.carPlateDetectSession
                 .runner()
@@ -80,22 +79,14 @@ public class OnAppStarted implements ApplicationRunner {
                 new MatOfPoint2f(new Point(0, 0), new Point(240, 0), new Point(0, 80), new Point(240, 80))
             );
 
-            var src = Imgcodecs.imread("./images/car.jpeg");
+            Imgproc.warpPerspective(resizeImage, plateImage, transform, new Size(240, 80));
 
-            var resized = new Mat();
-            Imgproc.resize(src, resized, new Size(IMG_SIZE, IMG_SIZE));
-
-            var dest = new Mat(240, 80, CvType.CV_8UC3);
-            Imgproc.warpPerspective(resized, dest, transform, new Size(240, 80));
-
-            Imgcodecs.imwrite("./cut.jpg", dest);
+            carPlateRecognize(plateImage);
         }
     }
 
-    private void carPlateRecognize() {
-        var resizeImage = resizeImage("./images/plate.jpeg", 240, 80);
-
-        try (var image = openCVImage2Tensor(resizeImage)) {
+    private void carPlateRecognize(Mat plateImage) {
+        try (var image = openCVImage2Tensor(plateImage)) {
             var result = p.carPlateRecognizeSession.runner().
                 feed("Input", image)
                 .fetch("Identity")
@@ -119,14 +110,15 @@ public class OnAppStarted implements ApplicationRunner {
         }
     }
 
-    private Mat resizeImage(String path, int width, int height) {
-        var rgb = new Mat();
-        Imgproc.cvtColor(Imgcodecs.imread(path), rgb, COLOR_BGR2RGB);
+    private AutoCloseMat resizeImage(String path, int width, int height) {
+        try (var rgb = new AutoCloseMat()) {
+            Imgproc.cvtColor(Imgcodecs.imread(path), rgb, COLOR_BGR2RGB);
 
-        var resized = new Mat();
-        Imgproc.resize(rgb, resized, new Size(width, height));
+            var resized = new AutoCloseMat();
+            Imgproc.resize(rgb, resized, new Size(width, height));
 
-        return resized;
+            return resized;
+        }
     }
 
     private Tensor openCVImage2Tensor(Mat image) {
