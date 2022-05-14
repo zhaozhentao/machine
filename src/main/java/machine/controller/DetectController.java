@@ -38,17 +38,18 @@ public class DetectController {
     private ModelProvider p;
 
     @PostMapping("/car_plate")
-    public void detect(@RequestParam("file") MultipartFile file) throws IOException {
+    public Object detect(@RequestParam("file") MultipartFile file) throws IOException {
         var image = formToImage(file);
 
-        carPlateDetect(image);
+        var plateImage = carPlateDetect(image);
+
+        return carPlateRecognize(plateImage);
     }
 
-    private void carPlateDetect(AutoCloseMat resizeImage) {
+    private AutoCloseMat carPlateDetect(AutoCloseMat resizeImage) {
         var IMG_SIZE = 625;
         try (
             resizeImage;
-            var plateImage = new AutoCloseMat(240, 80, CvType.CV_8UC3);
             var image = openCVImage2Tensor(resizeImage);
         ) {
             long a = System.currentTimeMillis();
@@ -79,18 +80,20 @@ public class DetectController {
                 new MatOfPoint2f(new Point(0, 0), new Point(240, 0), new Point(0, 80), new Point(240, 80))
             );
 
-            Imgproc.warpPerspective(resizeImage, plateImage, transform, new Size(240, 80));
+            var plateImage = new AutoCloseMat(240, 80, CvType.CV_8UC3);
 
+            Imgproc.warpPerspective(resizeImage, plateImage, transform, new Size(240, 80));
             Imgcodecs.imwrite("./cut.jpg", plateImage);
 
-            var begin = System.currentTimeMillis();
-            carPlateRecognize(plateImage);
-            System.out.println("carPlateRecognize " + (System.currentTimeMillis() - begin));
+            return plateImage;
         }
     }
 
-    private void carPlateRecognize(Mat plateImage) {
-        try (var image = openCVImage2Tensor(plateImage)) {
+    private String carPlateRecognize(AutoCloseMat plateImage) {
+        try (
+            plateImage;
+            var image = openCVImage2Tensor(plateImage)
+        ) {
             var result = p.carPlateRecognizeSession.runner().
                 feed("Input", image)
                 .fetch("Identity")
@@ -103,14 +106,12 @@ public class DetectController {
                 .fetch("Identity_7")
                 .run();
 
-            var plate = result.stream().map(t -> {
+            return result.stream().map(t -> {
                 var r = new float[(int) t.shape().asArray()[1]];
                 t.asRawTensor().data().asFloats().read(r);
                 t.close();
                 return chars[findMax(r)];
             }).collect(Collectors.joining());
-
-            System.out.println(plate);
         }
     }
 
