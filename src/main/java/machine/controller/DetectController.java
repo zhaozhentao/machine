@@ -88,11 +88,11 @@ public class DetectController {
                 result.asRawTensor().data().asFloats()
             );
 
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             for (var i = 0; i < shape[0]; i++) {
                 var floatDataBuffer = DataBuffers.ofFloats(shape[2]);
                 ndArray.get(i).get(0).read(floatDataBuffer);
-                float[] floats = new float[(int) shape[2]];
+                var floats = new float[(int) shape[2]];
                 floatDataBuffer.read(floats);
                 var index = findMax(floats);
                 if (index >= chars.length) continue;
@@ -105,14 +105,14 @@ public class DetectController {
 
     private AutoCloseMat formToImage(MultipartFile file) throws IOException {
         var fileInputStream = file.getInputStream();
-        byte[] bytes = IoUtil.readBytes(fileInputStream);
+        var bytes = IoUtil.readBytes(fileInputStream);
         try (
             fileInputStream;
             var byteMap = new AutoCloseMat(1, bytes.length, CvType.CV_8UC1);
             var rgb = new AutoCloseMat()
         ) {
             byteMap.put(0, 0, bytes);
-            Mat mat = Imgcodecs.imdecode(byteMap, Imgcodecs.IMREAD_COLOR);
+            var mat = Imgcodecs.imdecode(byteMap, Imgcodecs.IMREAD_COLOR);
 
             Imgproc.cvtColor(mat, rgb, Imgproc.COLOR_BGR2RGB);
             mat.release();
