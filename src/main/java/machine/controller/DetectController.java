@@ -1,7 +1,7 @@
 package machine.controller;
 
 import cn.hutool.core.io.IoUtil;
-import machine.AutoCloseMat;
+import machine.extend.AutoCloseMat;
 import machine.models.ModelProvider;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -18,8 +18,6 @@ import org.tensorflow.op.Ops;
 import org.tensorflow.types.TFloat32;
 
 import javax.annotation.Resource;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -35,10 +33,7 @@ public class DetectController {
 
     @PostMapping("/car_plate")
     public Object detect(@RequestParam("file") MultipartFile file) throws IOException {
-        File f = new File("./temp.jpg");
-        file.transferTo(f);
-
-        var image = formToImage(f);
+        var image = formToImage(file);
 
         var plateImage = carPlateDetect(image);
 
@@ -121,8 +116,8 @@ public class DetectController {
         }
     }
 
-    private AutoCloseMat formToImage(File file) throws IOException {
-        var fileInputStream = new FileInputStream(file);
+    private AutoCloseMat formToImage(MultipartFile file) throws IOException {
+        var fileInputStream = file.getInputStream();
         byte[] bytes = IoUtil.readBytes(fileInputStream);
         try (
             fileInputStream;
