@@ -19,9 +19,6 @@ import org.tensorflow.types.TFloat32;
 
 import javax.annotation.Resource;
 import java.io.IOException;
-import java.util.ArrayList;
-
-import static org.opencv.imgproc.Imgproc.COLOR_BGR2RGB;
 
 @RestController
 public class DetectController {
@@ -42,9 +39,7 @@ public class DetectController {
 
     private AutoCloseMat carPlateDetect(AutoCloseMat resizeImage) {
         var IMG_SIZE = 625;
-        try (
-            resizeImage;
-        ) {
+        try (resizeImage) {
             long a = System.currentTimeMillis();
             var image = openCVImage2Tensor(resizeImage);
             System.out.println("openCVImage2Tensor " + (System.currentTimeMillis() - a));
@@ -56,21 +51,12 @@ public class DetectController {
             var coordinates = new float[8];
             resultTensor.asRawTensor().data().asFloats().read(coordinates);
 
-            var points = new ArrayList<Point>();
-            for (var i = 0; i < 4; i++)
-                points.add(new Point(coordinates[2 * i] * IMG_SIZE, coordinates[2 * i + 1] * IMG_SIZE));
+            for (var i = 0; i < coordinates.length; i++) coordinates[i] *= IMG_SIZE;
 
-            // 根据x y分别找出左上 左下，右上，右下四个点
-            points.sort((o1, o2) -> (int) (o1.x - o2.x));
-            var lefts = points.subList(0, 2);
-            lefts.sort((o1, o2) -> (int) (o1.y - o2.y));
-            var leftTop = lefts.get(0);
-            var leftBottom = lefts.get(1);
-
-            var rights = points.subList(2, 4);
-            rights.sort((o1, o2) -> (int) (o1.y - o2.y));
-            var rightTop = rights.get(0);
-            var rightBottom = rights.get(1);
+            var leftTop = new Point(coordinates[0], coordinates[1]);
+            var rightTop = new Point(coordinates[6], coordinates[7]);
+            var leftBottom = new Point(coordinates[2], coordinates[3]);
+            var rightBottom = new Point(coordinates[4], coordinates[5]);
 
             var transform = Imgproc.getPerspectiveTransform(
                 new MatOfPoint2f(leftTop, rightTop, leftBottom, rightBottom),
@@ -80,6 +66,8 @@ public class DetectController {
             var plateImage = new AutoCloseMat(144, 40, CvType.CV_8UC3);
             Imgproc.warpPerspective(resizeImage, plateImage, transform, new Size(144, 40));
 
+            Imgcodecs.imwrite("./tmp.jpg", plateImage);
+
             return plateImage;
         }
     }
@@ -87,13 +75,12 @@ public class DetectController {
     private Object carPlateRecognize(AutoCloseMat plateImage) {
         try (
             plateImage;
-            var image = openCVImage2Tensor(plateImage)
-        ) {
+            var image = openCVImage2Tensor(plateImage);
             var result = p.carPlateRecognizeSession.runner().
                 feed("input_1:0", image)
                 .fetch("output_1")
                 .run().get(0);
-
+        ) {
             var shape = result.shape().asArray();
 
             var ndArray = NdArrays.wrap(
@@ -127,7 +114,7 @@ public class DetectController {
             byteMap.put(0, 0, bytes);
             Mat mat = Imgcodecs.imdecode(byteMap, Imgcodecs.IMREAD_COLOR);
 
-            Imgproc.cvtColor(mat, rgb, COLOR_BGR2RGB);
+            Imgproc.cvtColor(mat, rgb, Imgproc.COLOR_BGR2RGB);
             mat.release();
 
             var resized = new AutoCloseMat();
