@@ -83,6 +83,7 @@ public class DetectController {
         ) {
             var shape = result.shape().asArray();
 
+            // shape is (14, 1, 87)，each plate have 14 character at most
             var ndArray = NdArrays.wrap(
                 Shape.of(shape[0], shape[1], shape[2]),
                 result.asRawTensor().data().asFloats()
