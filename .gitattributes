@@ -3,3 +3,4 @@ libs/tensorflow-core-api-0.4.1-linux-x86_64.jar filter=lfs diff=lfs merge=lfs -t
 libs/tensorflow-0.4.1.jar filter=lfs diff=lfs merge=lfs -text
 models/zc.pb filter=lfs diff=lfs merge=lfs -text
 lib/libopencv_java455.so filter=lfs diff=lfs merge=lfs -text
+lib/libopencv_java455.dll filter=lfs diff=lfs merge=lfs -text
