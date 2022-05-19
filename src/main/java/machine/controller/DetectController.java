@@ -25,7 +25,7 @@ public class DetectController {
     @Resource
     private ParkingStatusModel parkingStatusModel;
 
-    @PostMapping("/car_plate")
+    @PostMapping("/lpr")
     public Object detect(@RequestParam("file") MultipartFile file) throws IOException {
         var image = TensorflowHelper.formToImage(file, 625, 625);
 
