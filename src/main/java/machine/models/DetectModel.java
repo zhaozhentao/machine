@@ -15,22 +15,18 @@ import org.tensorflow.Session;
 @Component
 public class DetectModel {
 
-    public Session carPlateDetectSession;
+    public Session s;
 
     public DetectModel() throws InvalidProtocolBufferException {
-        this.carPlateDetectSession = TensorflowHelper.model("models/detect.pb");
+        this.s = TensorflowHelper.model("models/detect.pb");
     }
 
     public AutoCloseMat carPlateDetect(AutoCloseMat resizeImage) {
         var IMG_SIZE = 625;
         try (resizeImage) {
-            long a = System.currentTimeMillis();
             var image = TensorflowHelper.openCVImage2Tensor(resizeImage);
-            System.out.println("openCVImage2Tensor " + (System.currentTimeMillis() - a));
 
-            a = System.currentTimeMillis();
-            var resultTensor = carPlateDetectSession.runner().feed("Input", image).fetch("Identity").run().get(0);
-            System.out.println("detect " + (System.currentTimeMillis() - a));
+            var resultTensor = s.runner().feed("Input", image).fetch("Identity").run().get(0);
 
             var coordinates = new float[8];
             resultTensor.asRawTensor().data().asFloats().read(coordinates);

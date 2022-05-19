@@ -30,7 +30,7 @@ public class TensorflowHelper {
         return new Session(g);
     }
 
-    public static AutoCloseMat formToImage(MultipartFile file) throws IOException {
+    public static AutoCloseMat formToImage(MultipartFile file, int width, int height) throws IOException {
         var fileInputStream = file.getInputStream();
         var bytes = IoUtil.readBytes(fileInputStream);
         try (
@@ -45,7 +45,7 @@ public class TensorflowHelper {
             mat.release();
 
             var resized = new AutoCloseMat();
-            Imgproc.resize(rgb, resized, new Size(625, 625));
+            Imgproc.resize(rgb, resized, new Size(width, height));
 
             return resized;
         }
