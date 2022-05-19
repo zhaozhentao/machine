@@ -1,4 +1,4 @@
-package machine.models.detect;
+package machine.models;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import machine.extend.AutoCloseMat;

@@ -1,8 +1,8 @@
 package machine.controller;
 
 import machine.helper.TensorflowHelper;
-import machine.models.detect.DetectModel;
-import machine.models.ocr.OcrModel;
+import machine.models.DetectModel;
+import machine.models.OcrModel;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
