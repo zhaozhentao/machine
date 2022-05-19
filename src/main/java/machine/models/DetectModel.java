@@ -23,11 +23,11 @@ public class DetectModel {
 
     public AutoCloseMat carPlateDetect(AutoCloseMat resizeImage) {
         var IMG_SIZE = 625;
-        try (resizeImage) {
+        try (
+            resizeImage;
             var image = TensorflowHelper.openCVImage2Tensor(resizeImage);
-
-            var resultTensor = s.runner().feed("Input", image).fetch("Identity").run().get(0);
-
+            var resultTensor = s.runner().feed("Input", image).fetch("Identity").run().get(0)
+        ) {
             var coordinates = new float[8];
             resultTensor.asRawTensor().data().asFloats().read(coordinates);
 
@@ -45,9 +45,7 @@ public class DetectModel {
 
             var plateImage = new AutoCloseMat(144, 40, CvType.CV_8UC3);
             Imgproc.warpPerspective(resizeImage, plateImage, transform, new Size(144, 40));
-
             Imgcodecs.imwrite("./tmp.jpg", plateImage);
-
             return plateImage;
         }
     }

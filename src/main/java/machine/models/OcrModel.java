@@ -24,10 +24,7 @@ public class OcrModel {
         try (
             plateImage;
             var image = TensorflowHelper.openCVImage2Tensor(plateImage);
-            var result = s.runner().
-                feed("input_1:0", image)
-                .fetch("output_1")
-                .run().get(0);
+            var result = s.runner().feed("input_1:0", image).fetch("output_1").run().get(0)
         ) {
             var shape = result.shape().asArray();
 
