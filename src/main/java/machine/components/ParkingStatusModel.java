@@ -1,4 +1,4 @@
-package machine.models;
+package machine.components;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import machine.enums.ParkingStatusEnum;

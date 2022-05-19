@@ -1,9 +1,10 @@
 package machine.controller;
 
+import machine.components.DetectModel;
+import machine.components.OcrModel;
+import machine.components.ParkingStatusModel;
+import machine.components.ThreadPool;
 import machine.helper.TensorflowHelper;
-import machine.models.DetectModel;
-import machine.models.OcrModel;
-import machine.models.ParkingStatusModel;
 import machine.pojo.ParkingStateResult;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -11,33 +12,44 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
-import java.io.IOException;
 
 @RestController
 public class DetectController {
 
     @Resource
-    private DetectModel detectModel;
+    private OcrModel ocrModel;
 
     @Resource
-    private OcrModel ocrModel;
+    private DetectModel detectModel;
 
     @Resource
     private ParkingStatusModel parkingStatusModel;
 
+    @Resource
+    ThreadPool threadPool;
+
     @PostMapping("/lpr")
-    public Object detect(@RequestParam("file") MultipartFile file) throws IOException {
-        var image = TensorflowHelper.formToImage(file, 625, 625);
+    public Object detect(@RequestParam("file") MultipartFile file) throws Exception {
+        return threadPool.executor.submit(() -> {
+            var image = TensorflowHelper.formToImage(file, 625, 625);
 
-        var plateImage = detectModel.carPlateDetect(image);
+            var plateImage = detectModel.carPlateDetect(image);
 
-        return ocrModel.carPlateRecognize(plateImage);
+            return ocrModel.carPlateRecognize(plateImage);
+        }).get();
     }
 
     @PostMapping(value = "/parking_status_recognize")
-    public Object parkingStatusRecognize(@RequestParam("file") MultipartFile file) throws IOException {
-        var image = TensorflowHelper.formToImage(file, 96, 96);
+    public Object parkingStatusRecognize(@RequestParam("file") MultipartFile file) throws Exception {
+        return threadPool.executor.submit(() -> {
+            var image = TensorflowHelper.formToImage(file, 96, 96);
 
-        return new ParkingStateResult(parkingStatusModel.predict(image));
+            return new ParkingStateResult(parkingStatusModel.predict(image));
+        }).get();
+    }
+
+    @PostMapping(value = "/hpc")
+    public Object hpc(@RequestParam("file") MultipartFile file) {
+        return "";
     }
 }
