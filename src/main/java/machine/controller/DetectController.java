@@ -17,13 +17,13 @@ import javax.annotation.Resource;
 public class DetectController {
 
     @Resource
-    private OcrModel ocrModel;
+    OcrModel ocrModel;
 
     @Resource
-    private DetectModel detectModel;
+    DetectModel detectModel;
 
     @Resource
-    private ParkingStatusModel parkingStatusModel;
+    ParkingStatusModel parkingStatusModel;
 
     @Resource
     ThreadPool threadPool;
