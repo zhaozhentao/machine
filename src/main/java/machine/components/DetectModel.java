@@ -13,12 +13,10 @@ import org.springframework.stereotype.Component;
 import org.tensorflow.Session;
 
 @Component
-public class DetectModel {
-
-    Session s;
+public class DetectModel extends Model {
 
     public DetectModel() throws InvalidProtocolBufferException {
-        this.s = TensorflowHelper.model("models/detect.pb");
+        super("models/detect.pb");
     }
 
     public AutoCloseMat carPlateDetect(AutoCloseMat resizeImage) {

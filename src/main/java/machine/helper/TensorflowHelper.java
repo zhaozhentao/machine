@@ -24,12 +24,6 @@ import java.io.IOException;
 
 public class TensorflowHelper {
 
-    public static Session model(String path) throws InvalidProtocolBufferException {
-        Graph g = new Graph();
-        g.importGraphDef(GraphDef.parseFrom(ResourceUtil.readBytes(path)));
-        return new Session(g);
-    }
-
     public static AutoCloseMat formToImage(MultipartFile file, int width, int height) throws IOException {
         var fileInputStream = file.getInputStream();
         var bytes = IoUtil.readBytes(fileInputStream);

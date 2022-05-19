@@ -8,12 +8,10 @@ import org.springframework.stereotype.Component;
 import org.tensorflow.Session;
 
 @Component
-public class ParkingStatusModel {
-
-    Session s;
+public class ParkingStatusModel extends Model {
 
     public ParkingStatusModel() throws InvalidProtocolBufferException {
-        this.s = TensorflowHelper.model("models/parking_status.pb");
+        super("models/parking_status.pb");
     }
 
     public ParkingStatusEnum predict(AutoCloseMat image) {
