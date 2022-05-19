@@ -17,13 +17,15 @@ public class ParkingStatusModel {
     }
 
     public ParkingStatusEnum predict(AutoCloseMat image) {
-        var input = TensorflowHelper.openCVImage2Tensor(image);
+        try (
+            image;
+            var input = TensorflowHelper.openCVImage2Tensor(image);
+            var resultTensor = s.runner().feed("input_1:0", input).fetch("output_1:0").run().get(0)
+        ) {
+            var result = new float[2];
+            resultTensor.asRawTensor().data().asFloats().read(result);
 
-        var resultTensor = s.runner().feed("input_1:0", input).fetch("output_1:0").run().get(0);
-
-        float[] result = new float[2];
-        resultTensor.asRawTensor().data().asFloats().read(result);
-
-        return result[0] > result[1] ? ParkingStatusEnum.FREE : ParkingStatusEnum.OCCUPY;
+            return result[0] > result[1] ? ParkingStatusEnum.FREE : ParkingStatusEnum.OCCUPY;
+        }
     }
 }
