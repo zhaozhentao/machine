@@ -3,9 +3,9 @@ package machine.controller;
 import machine.components.DetectModel;
 import machine.components.OcrModel;
 import machine.components.ParkingStatusModel;
-import machine.components.ThreadPool;
 import machine.helper.TensorflowHelper;
 import machine.pojo.ParkingStateResult;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,11 +26,11 @@ public class DetectController {
     ParkingStatusModel parkingStatusModel;
 
     @Resource
-    ThreadPool threadPool;
+    ThreadPoolTaskExecutor executor;
 
     @PostMapping("/lpr")
     public Object detect(@RequestParam("file") MultipartFile file) throws Exception {
-        return threadPool.executor.submit(() -> {
+        return executor.submit(() -> {
             var image = TensorflowHelper.formToImage(file, 625, 625);
 
             var plateImage = detectModel.carPlateDetect(image);
@@ -41,7 +41,7 @@ public class DetectController {
 
     @PostMapping(value = "/parking_status_recognize")
     public Object parkingStatusRecognize(@RequestParam("file") MultipartFile file) throws Exception {
-        return threadPool.executor.submit(() -> {
+        return executor.submit(() -> {
             var image = TensorflowHelper.formToImage(file, 96, 96);
 
             return new ParkingStateResult(parkingStatusModel.predict(image));

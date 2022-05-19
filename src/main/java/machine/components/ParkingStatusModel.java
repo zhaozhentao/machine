@@ -10,7 +10,7 @@ import org.tensorflow.Session;
 @Component
 public class ParkingStatusModel {
 
-    public Session s;
+    Session s;
 
     public ParkingStatusModel() throws InvalidProtocolBufferException {
         this.s = TensorflowHelper.model("models/parking_status.pb");

@@ -15,7 +15,7 @@ import org.tensorflow.Session;
 @Component
 public class DetectModel {
 
-    public Session s;
+    Session s;
 
     public DetectModel() throws InvalidProtocolBufferException {
         this.s = TensorflowHelper.model("models/detect.pb");
