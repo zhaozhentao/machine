@@ -17,7 +17,7 @@ public class OcrModel extends BaseModel {
         super("models/ocr_model.pb");
     }
 
-    public Object carPlateRecognize(AutoCloseMat plateImage) {
+    public String carPlateRecognize(AutoCloseMat plateImage) {
         try (
             plateImage;
             var image = TensorflowHelper.openCVImage2Tensor(plateImage);

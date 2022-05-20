@@ -1,4 +1,4 @@
-package machine.pojo;
+package machine.entity;
 
 import machine.enums.ParkingStatusEnum;
 

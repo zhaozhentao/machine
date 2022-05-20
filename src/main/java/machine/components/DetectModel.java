@@ -1,6 +1,7 @@
 package machine.components;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import machine.entity.DetectResult;
 import machine.extend.AutoCloseMat;
 import machine.helper.TensorflowHelper;
 import org.opencv.core.CvType;
@@ -18,7 +19,7 @@ public class DetectModel extends BaseModel {
         super("models/detect.pb");
     }
 
-    public AutoCloseMat carPlateDetect(AutoCloseMat resizeImage) {
+    public DetectResult carPlateDetect(AutoCloseMat resizeImage) {
         var IMG_SIZE = 625;
         try (
             resizeImage;
@@ -43,7 +44,8 @@ public class DetectModel extends BaseModel {
             var plateImage = new AutoCloseMat(144, 40, CvType.CV_8UC3);
             Imgproc.warpPerspective(resizeImage, plateImage, transform, new Size(144, 40));
             Imgcodecs.imwrite("./tmp.jpg", plateImage);
-            return plateImage;
+
+            return new DetectResult(leftTop, rightTop, leftBottom, rightBottom, plateImage);
         }
     }
 }
