@@ -5,10 +5,9 @@ import machine.enums.ParkingStatusEnum;
 import machine.extend.AutoCloseMat;
 import machine.helper.TensorflowHelper;
 import org.springframework.stereotype.Component;
-import org.tensorflow.Session;
 
 @Component
-public class ParkingStatusModel extends Model {
+public class ParkingStatusModel extends BaseModel {
 
     public ParkingStatusModel() throws InvalidProtocolBufferException {
         super("models/parking_status.pb");

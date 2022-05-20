@@ -10,10 +10,9 @@ import org.opencv.core.Size;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.springframework.stereotype.Component;
-import org.tensorflow.Session;
 
 @Component
-public class DetectModel extends Model {
+public class DetectModel extends BaseModel {
 
     public DetectModel() throws InvalidProtocolBufferException {
         super("models/detect.pb");
