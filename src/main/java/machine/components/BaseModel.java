@@ -8,7 +8,7 @@ import org.tensorflow.proto.framework.GraphDef;
 
 public abstract class BaseModel {
 
-    public Session s;
+    public final Session s;
 
     public BaseModel(String path) throws InvalidProtocolBufferException {
         Graph g = new Graph();
