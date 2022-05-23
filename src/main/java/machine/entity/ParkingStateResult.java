@@ -6,7 +6,10 @@ public class ParkingStateResult {
 
     public ParkingStatusEnum state;
 
-    public ParkingStateResult(ParkingStatusEnum state) {
+    public long timeSpent;
+
+    public ParkingStateResult(ParkingStatusEnum state, long timeSpent) {
         this.state = state;
+        this.timeSpent = timeSpent;
     }
 }
