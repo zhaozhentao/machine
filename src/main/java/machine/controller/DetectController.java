@@ -30,7 +30,7 @@ public class DetectController {
     ThreadPoolTaskExecutor executor;
 
     private HashMap<String, Object> result(Object data) {
-        return new HashMap<>() {{
+        return new HashMap<>(4) {{
             put("resultCode", 0);
             put("msg", "Success");
             put("msgParameters", "Success");
@@ -47,7 +47,7 @@ public class DetectController {
 
             var plate = ocrModel.carPlateRecognize(detect.plateImage);
 
-            return result(new HashMap<String, Object>() {{
+            return result(new HashMap<String, Object>(8) {{
                 put("left", Math.min(detect.leftTop.x, detect.leftBottom.x));
                 put("right", Math.max(detect.rightTop.x, detect.rightBottom.x));
                 put("top", Math.min(detect.leftTop.y, detect.rightTop.y));
