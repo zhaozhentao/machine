@@ -43,9 +43,7 @@ public class DetectController {
         return executor.submit(() -> {
             var begin = System.currentTimeMillis();
 
-            var mats = formToImage(file, 320, 320);
-
-            var detect = detectModel.carPlateDetect(mats[0], mats[1]);
+            var detect = detectModel.carPlateDetect(formToImage(file, 320, 320));
 
             var plate = ocrModel.carPlateRecognize(detect.plateImage);
 

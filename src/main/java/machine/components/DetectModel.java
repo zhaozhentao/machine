@@ -19,11 +19,11 @@ public class DetectModel extends BaseModel {
         super("models/detect.pb");
     }
 
-    public DetectResult carPlateDetect(AutoCloseMat resizeImage, AutoCloseMat rawImage) {
+    public DetectResult carPlateDetect(AutoCloseMat[] images) {
         var IMG_SIZE = 320;
         try (
-            resizeImage;
-            rawImage;
+            var resizeImage = images[0];
+            var rawImage = images[1];
             var image = TensorflowHelper.openCVImage2Tensor(resizeImage);
             var resultTensor = s.runner().feed("Input", image).fetch("Identity").run().get(0)
         ) {
