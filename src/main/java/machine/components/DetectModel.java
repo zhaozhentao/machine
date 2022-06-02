@@ -19,10 +19,11 @@ public class DetectModel extends BaseModel {
         super("models/detect.pb");
     }
 
-    public DetectResult carPlateDetect(AutoCloseMat resizeImage) {
-        var IMG_SIZE = 625;
+    public DetectResult carPlateDetect(AutoCloseMat resizeImage, AutoCloseMat rawImage) {
+        var IMG_SIZE = 320;
         try (
             resizeImage;
+            rawImage;
             var image = TensorflowHelper.openCVImage2Tensor(resizeImage);
             var resultTensor = s.runner().feed("Input", image).fetch("Identity").run().get(0)
         ) {
@@ -31,10 +32,12 @@ public class DetectModel extends BaseModel {
 
             for (var i = 0; i < coordinates.length; i++) coordinates[i] *= IMG_SIZE;
 
-            var leftTop = new Point(coordinates[0], coordinates[1]);
-            var rightTop = new Point(coordinates[6], coordinates[7]);
-            var leftBottom = new Point(coordinates[2], coordinates[3]);
-            var rightBottom = new Point(coordinates[4], coordinates[5]);
+            var width = rawImage.width();
+            var height = rawImage.height();
+            var leftTop = new Point(coordinates[0] * width / IMG_SIZE, coordinates[1] * height / IMG_SIZE);
+            var rightTop = new Point(coordinates[6] * width / IMG_SIZE, coordinates[7] * height / IMG_SIZE);
+            var leftBottom = new Point(coordinates[2] * width / IMG_SIZE, coordinates[3] * height / IMG_SIZE);
+            var rightBottom = new Point(coordinates[4] * width / IMG_SIZE, coordinates[5] * height / IMG_SIZE);
 
             var transform = Imgproc.getPerspectiveTransform(
                 new MatOfPoint2f(leftTop, rightTop, leftBottom, rightBottom),
@@ -42,7 +45,7 @@ public class DetectModel extends BaseModel {
             );
 
             var plateImage = new AutoCloseMat(144, 40, CvType.CV_8UC3);
-            Imgproc.warpPerspective(resizeImage, plateImage, transform, new Size(144, 40));
+            Imgproc.warpPerspective(rawImage, plateImage, transform, new Size(144, 40));
             Imgcodecs.imwrite("./tmp.jpg", plateImage);
 
             return new DetectResult(leftTop, rightTop, leftBottom, rightBottom, plateImage);
