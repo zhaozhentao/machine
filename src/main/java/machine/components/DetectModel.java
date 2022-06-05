@@ -17,6 +17,10 @@ import org.tensorflow.Session;
 import org.tensorflow.Tensor;
 import org.tensorflow.proto.framework.GraphDef;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+
 @Component
 public class DetectModel {
 
@@ -24,7 +28,7 @@ public class DetectModel {
     private final Session leftBottom;
     private final Session rightTop;
     private final Session rightBottom;
-    private final int IMG_SIZE = 320;
+    private final Executor executor = Executors.newFixedThreadPool(4);
 
     public DetectModel() throws InvalidProtocolBufferException {
         Graph leftTopGraph = new Graph();
@@ -44,30 +48,34 @@ public class DetectModel {
         rightTop = new Session(rightTopGraph);
     }
 
-    public DetectResult carPlateDetect(AutoCloseMat[] images) {
+    public DetectResult carPlateDetect(AutoCloseMat[] images) throws InterruptedException {
+        var resizeImage = images[0];
+        var rawImage = images[1];
+        var image = TensorflowHelper.openCVImage2Tensor(resizeImage);
+        var tensors = new Tensor[4];
+
+        CountDownLatch latch = new CountDownLatch(4);
+        submit(tensors, 0, leftTop, image, latch);
+        submit(tensors, 1, leftBottom, image, latch);
+        submit(tensors, 2, rightBottom, image, latch);
+        submit(tensors, 3, rightTop, image, latch);
+        latch.await();
+
         try (
-            var resizeImage = images[0];
-            var rawImage = images[1];
-            var image = TensorflowHelper.openCVImage2Tensor(resizeImage);
-            var leftTopResult = leftTop.runner().feed("Input", image).fetch("Identity").run().get(0);
-            var leftBottomResult = leftBottom.runner().feed("Input", image).fetch("Identity").run().get(0);
-            var rightBottomResult = rightBottom.runner().feed("Input", image).fetch("Identity").run().get(0);
-            var rightTopResult = rightTop.runner().feed("Input", image).fetch("Identity").run().get(0)
+            resizeImage;
+            rawImage;
+            image;
+            var leftTopResult = tensors[0];
+            var leftBottomResult = tensors[1];
+            var rightBottomResult = tensors[2];
+            var rightTopResult = tensors[3]
         ) {
             var width = rawImage.width();
             var height = rawImage.height();
-
-            var coordinates = tensorToCoordinates(leftTopResult, width, height);
-            var leftTop = new Point(coordinates[0] * width / IMG_SIZE, coordinates[1] * height / IMG_SIZE);
-
-            coordinates = tensorToCoordinates(leftBottomResult, width, height);
-            var leftBottom = new Point(coordinates[0] * width / IMG_SIZE, coordinates[1] * height / IMG_SIZE);
-
-            coordinates = tensorToCoordinates(rightBottomResult, width, height);
-            var rightBottom = new Point(coordinates[0] * width / IMG_SIZE, coordinates[1] * height / IMG_SIZE);
-
-            coordinates = tensorToCoordinates(rightTopResult, width, height);
-            var rightTop = new Point(coordinates[0] * width / IMG_SIZE, coordinates[1] * height / IMG_SIZE);
+            var leftTop = tensorToCoordinates(leftTopResult, width, height);
+            var leftBottom = tensorToCoordinates(leftBottomResult, width, height);
+            var rightBottom = tensorToCoordinates(rightBottomResult, width, height);
+            var rightTop = tensorToCoordinates(rightTopResult, width, height);
 
             var transform = Imgproc.getPerspectiveTransform(
                 new MatOfPoint2f(leftTop, rightTop, leftBottom, rightBottom),
@@ -82,12 +90,21 @@ public class DetectModel {
         }
     }
 
-    private float[] tensorToCoordinates(Tensor leftTopResult, int width, int height) {
+    private void submit(Tensor[] tensors, int i, Session session, Tensor image, CountDownLatch latch) {
+        executor.execute(() -> {
+            tensors[i] = session.runner().feed("Input", image).fetch("Identity").run().get(0);
+            latch.countDown();
+        });
+    }
+
+    private Point tensorToCoordinates(Tensor leftTopResult, int width, int height) {
+        var IMG_SIZE = 320;
         var coordinates = new float[2];
+
         leftTopResult.asRawTensor().data().asFloats().read(coordinates);
 
         for (var i = 0; i < coordinates.length; i++) coordinates[i] *= IMG_SIZE;
 
-        return coordinates;
+        return new Point(coordinates[0] * width / IMG_SIZE, coordinates[1] * height / IMG_SIZE);
     }
 }
