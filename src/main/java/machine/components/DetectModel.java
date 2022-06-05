@@ -11,24 +11,26 @@ import org.opencv.core.Point;
 import org.opencv.core.Size;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 import org.tensorflow.Graph;
 import org.tensorflow.Session;
 import org.tensorflow.Tensor;
 import org.tensorflow.proto.framework.GraphDef;
 
+import javax.annotation.Resource;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 
 @Component
 public class DetectModel {
+
+    @Resource(name = "detect_pool_thread")
+    private ThreadPoolTaskExecutor executor;
 
     private final Session leftTop;
     private final Session leftBottom;
     private final Session rightTop;
     private final Session rightBottom;
-    private final Executor executor = Executors.newFixedThreadPool(4);
 
     public DetectModel() throws InvalidProtocolBufferException {
         Graph leftTopGraph = new Graph();
@@ -91,7 +93,8 @@ public class DetectModel {
     }
 
     private void submit(Tensor[] tensors, int i, Session session, Tensor image, CountDownLatch latch) {
-        executor.execute(() -> {
+        executor.submit(() -> {
+            System.out.println(Thread.currentThread().getName());
             tensors[i] = session.runner().feed("Input", image).fetch("Identity").run().get(0);
             latch.countDown();
         });
