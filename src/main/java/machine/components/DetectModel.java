@@ -33,7 +33,7 @@ public class DetectModel {
     private final Session rightBottom;
 
     private Session pathToSession(String path) throws InvalidProtocolBufferException {
-        Graph graph = new Graph();
+        var graph = new Graph();
         graph.importGraphDef(GraphDef.parseFrom(ResourceUtil.readBytes(path)));
         return new Session(graph);
     }
@@ -51,7 +51,7 @@ public class DetectModel {
         var image = TensorflowHelper.openCVImage2Tensor(resizeImage);
         var tensors = new Tensor[4];
 
-        CountDownLatch latch = new CountDownLatch(4);
+        var latch = new CountDownLatch(4);
         submit(tensors, 0, leftTop, image, latch);
         submit(tensors, 1, leftBottom, image, latch);
         submit(tensors, 2, rightBottom, image, latch);
