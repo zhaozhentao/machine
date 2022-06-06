@@ -32,22 +32,17 @@ public class DetectModel {
     private final Session rightTop;
     private final Session rightBottom;
 
+    private Session pathToSession(String path) throws InvalidProtocolBufferException {
+        Graph graph = new Graph();
+        graph.importGraphDef(GraphDef.parseFrom(ResourceUtil.readBytes(path)));
+        return new Session(graph);
+    }
+
     public DetectModel() throws InvalidProtocolBufferException {
-        Graph leftTopGraph = new Graph();
-        leftTopGraph.importGraphDef(GraphDef.parseFrom(ResourceUtil.readBytes("models/detect_left_top.pb")));
-        leftTop = new Session(leftTopGraph);
-
-        Graph leftBottomGraph = new Graph();
-        leftBottomGraph.importGraphDef(GraphDef.parseFrom(ResourceUtil.readBytes("models/detect_left_bottom.pb")));
-        leftBottom = new Session(leftBottomGraph);
-
-        Graph rightBottomGraph = new Graph();
-        rightBottomGraph.importGraphDef(GraphDef.parseFrom(ResourceUtil.readBytes("models/detect_right_bottom.pb")));
-        rightBottom = new Session(rightBottomGraph);
-
-        Graph rightTopGraph = new Graph();
-        rightTopGraph.importGraphDef(GraphDef.parseFrom(ResourceUtil.readBytes("models/detect_right_top.pb")));
-        rightTop = new Session(rightTopGraph);
+        leftTop = pathToSession("models/detect_left_top.pb");
+        leftBottom = pathToSession("models/detect_left_bottom.pb");
+        rightBottom = pathToSession("models/detect_right_bottom.pb");
+        rightTop = pathToSession("models/detect_right_top.pb");
     }
 
     public DetectResult carPlateDetect(AutoCloseMat[] images) throws InterruptedException {
@@ -94,7 +89,6 @@ public class DetectModel {
 
     private void submit(Tensor[] tensors, int i, Session session, Tensor image, CountDownLatch latch) {
         executor.submit(() -> {
-            System.out.println(Thread.currentThread().getName());
             tensors[i] = session.runner().feed("Input", image).fetch("Identity").run().get(0);
             latch.countDown();
         });
