@@ -15,5 +15,5 @@ repositories {
 dependencies {
 	implementation fileTree(dir: 'libs', include: '*.jar')
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-	implementation 'cn.hutool:hutool-all:5.8.0'
+	implementation 'cn.hutool:hutool-all:5.8.1'
 }
