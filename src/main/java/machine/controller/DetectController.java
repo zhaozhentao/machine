@@ -47,15 +47,17 @@ public class DetectController {
 
             var plate = ocrModel.carPlateRecognize(detect.plateImage);
 
-            return result(new HashMap<String, Object>(8) {{
-                put("left", Math.min(detect.leftTop.x, detect.leftBottom.x));
-                put("right", Math.max(detect.rightTop.x, detect.rightBottom.x));
-                put("top", Math.min(detect.leftTop.y, detect.rightTop.y));
-                put("bottom", Math.max(detect.leftBottom.y, detect.rightBottom.y));
-                put("plate", plate);
-                put("confidence", 0);
-                put("timeSpent", System.currentTimeMillis() - begin);
-            }});
+            return result(
+                new HashMap<String, Object>(8) {{
+                    put("left", Math.min(detect.leftTop.x, detect.leftBottom.x));
+                    put("right", Math.max(detect.rightTop.x, detect.rightBottom.x));
+                    put("top", Math.min(detect.leftTop.y, detect.rightTop.y));
+                    put("bottom", Math.max(detect.leftBottom.y, detect.rightBottom.y));
+                    put("plate", plate);
+                    put("confidence", 0);
+                    put("timeSpent", System.currentTimeMillis() - begin);
+                }}
+            );
         }).get();
     }
 
@@ -75,10 +77,12 @@ public class DetectController {
 
     @GetMapping("license_request_code")
     public Object code() {
-        return result(new HashMap<>(2) {{
-            put("isAuthorized", true);
-            put("requestCode", "F45D3A4470825697-E4060300FFFBAB1F");
-        }});
+        return result(
+            new HashMap<>(2) {{
+                put("isAuthorized", true);
+                put("requestCode", "F45D3A4470825697-E4060300FFFBAB1F");
+            }}
+        );
     }
 
     @GetMapping("/version")
