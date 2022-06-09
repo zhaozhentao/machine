@@ -17,7 +17,7 @@ public class ParkingStatusModel extends BaseModel {
         try (
             var resizeImage = images[0];
             var ignored = images[1];
-            var input = TensorflowHelper.openCVImage2Tensor(resizeImage);
+            var input = TensorflowHelper.openCVImage2Tensor(resizeImage, 255);
             var resultTensor = s.runner().feed("input_1:0", input).fetch("output_1:0").run().get(0)
         ) {
             var result = new float[2];
