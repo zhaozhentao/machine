@@ -47,9 +47,14 @@ public class DetectModel extends BaseModel {
 
             var plateImage = new AutoCloseMat(144, PLATE_HEIGHT, CvType.CV_8UC3);
             Imgproc.warpPerspective(rawImage, plateImage, transform, new Size(144, PLATE_HEIGHT));
-            Imgcodecs.imwrite("./tmp.jpg", plateImage);
 
-            return new DetectResult(leftTop, rightTop, leftBottom, rightBottom, plateImage);
+            var bgrPlateImage = new AutoCloseMat();
+            Imgproc.cvtColor(plateImage, bgrPlateImage, Imgproc.COLOR_RGB2BGR);
+            plateImage.release();
+
+            Imgcodecs.imwrite("./tmp.jpg", bgrPlateImage);
+
+            return new DetectResult(leftTop, rightTop, leftBottom, rightBottom, bgrPlateImage);
         }
     }
 }

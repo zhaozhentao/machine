@@ -16,7 +16,7 @@ import org.tensorflow.Tensor;
 import java.util.ArrayList;
 import java.util.List;
 
-@Component
+//@Component
 public class RetinaDetectModel extends BaseModel {
 
     public Session s;
