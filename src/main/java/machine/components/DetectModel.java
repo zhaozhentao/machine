@@ -24,7 +24,7 @@ public class DetectModel extends BaseModel {
         try (
             var resizeImage = images[0];
             var rawImage = images[1];
-            var image = TensorflowHelper.openCVImage2Tensor(resizeImage);
+            var image = TensorflowHelper.openCVImage2Tensor(resizeImage, 255);
             var resultTensor = s.runner().feed("Input", image).fetch("Identity").run().get(0)
         ) {
             var coordinates = new float[8];

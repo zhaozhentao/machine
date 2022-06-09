@@ -41,7 +41,7 @@ public class TensorflowHelper {
         }
     }
 
-    public static Tensor openCVImage2Tensor(Mat image) {
+    public static Tensor openCVImage2Tensor(Mat image, float div) {
         var channel = image.channels();
 
         var imageBytes = new byte[(int) (image.total() * channel)];
@@ -53,7 +53,7 @@ public class TensorflowHelper {
 
         var tf = Ops.create();
         var floatOp = tf.dtypes.cast(tf.constant(imageNdArray), TFloat32.class);
-        var normalOp = tf.math.div(floatOp, tf.constant(255.0f));
+        var normalOp = tf.math.div(floatOp, tf.constant(div));
         return tf.reshape(normalOp, tf.array(1, height, width, channel)).asTensor();
     }
 }
