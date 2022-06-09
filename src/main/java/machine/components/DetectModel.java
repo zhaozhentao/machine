@@ -21,6 +21,7 @@ public class DetectModel extends BaseModel {
 
     public DetectResult carPlateDetect(AutoCloseMat[] images) {
         var IMG_SIZE = 320;
+        var PLATE_HEIGHT = 50;
         try (
             var resizeImage = images[0];
             var rawImage = images[1];
@@ -41,11 +42,11 @@ public class DetectModel extends BaseModel {
 
             var transform = Imgproc.getPerspectiveTransform(
                 new MatOfPoint2f(leftTop, rightTop, leftBottom, rightBottom),
-                new MatOfPoint2f(new Point(0, 0), new Point(144, 0), new Point(0, 40), new Point(144, 40))
+                new MatOfPoint2f(new Point(0, 0), new Point(144, 0), new Point(0, PLATE_HEIGHT), new Point(144, PLATE_HEIGHT))
             );
 
-            var plateImage = new AutoCloseMat(144, 40, CvType.CV_8UC3);
-            Imgproc.warpPerspective(rawImage, plateImage, transform, new Size(144, 40));
+            var plateImage = new AutoCloseMat(144, PLATE_HEIGHT, CvType.CV_8UC3);
+            Imgproc.warpPerspective(rawImage, plateImage, transform, new Size(144, PLATE_HEIGHT));
             Imgcodecs.imwrite("./tmp.jpg", plateImage);
 
             return new DetectResult(leftTop, rightTop, leftBottom, rightBottom, plateImage);
