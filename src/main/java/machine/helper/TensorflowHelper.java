@@ -20,7 +20,7 @@ import java.io.IOException;
 public class TensorflowHelper {
 
     // 返回两个图片，0号元素是缩放图片，1号元素是原始图片
-    public static AutoCloseMat[] formToImage(MultipartFile file, int width, int height) throws IOException {
+    public static FromToImageResult formToImage(MultipartFile file, int width, int height) throws IOException {
         var fileInputStream = file.getInputStream();
         var bytes = IoUtil.readBytes(fileInputStream);
         try (
@@ -30,14 +30,10 @@ public class TensorflowHelper {
             byteMap.put(0, 0, bytes);
             var mat = Imgcodecs.imdecode(byteMap, Imgcodecs.IMREAD_COLOR);
 
-            var rgb = new AutoCloseMat();
-            Imgproc.cvtColor(mat, rgb, Imgproc.COLOR_BGR2RGB);
-            mat.release();
-
             var resized = new AutoCloseMat();
-            Imgproc.resize(rgb, resized, new Size(width, height));
+            Imgproc.resize(mat, resized, new Size(width, height));
 
-            return new AutoCloseMat[]{resized, rgb};
+            return new FromToImageResult(resized, mat);
         }
     }
 
@@ -55,5 +51,17 @@ public class TensorflowHelper {
         var floatOp = tf.dtypes.cast(tf.constant(imageNdArray), TFloat32.class);
         var normalOp = tf.math.div(floatOp, tf.constant(div));
         return tf.reshape(normalOp, tf.array(1, height, width, channel)).asTensor();
+    }
+
+    public static class FromToImageResult {
+
+        public AutoCloseMat resized;
+
+        public Mat raw;
+
+        public FromToImageResult(AutoCloseMat resized, Mat raw) {
+            this.resized = resized;
+            this.raw = raw;
+        }
     }
 }

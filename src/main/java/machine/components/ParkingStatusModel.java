@@ -13,10 +13,9 @@ public class ParkingStatusModel extends BaseModel {
         super("models/parking_status.pb");
     }
 
-    public ParkingStatusEnum predict(AutoCloseMat[] images) {
+    public ParkingStatusEnum predict(AutoCloseMat resizeImage) {
         try (
-            var resizeImage = images[0];
-            var ignored = images[1];
+            resizeImage;
             var input = TensorflowHelper.openCVImage2Tensor(resizeImage, 255);
             var resultTensor = s.runner().feed("input_1:0", input).fetch("output_1:0").run().get(0)
         ) {

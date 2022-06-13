@@ -4,6 +4,7 @@ import machine.components.DetectModel;
 import machine.components.OcrModel;
 import machine.components.ParkingStatusModel;
 import machine.entity.ParkingStateResult;
+import machine.helper.TensorflowHelper;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -43,7 +44,8 @@ public class DetectController {
         return executor.submit(() -> {
             var begin = System.currentTimeMillis();
 
-            var detect = detectModel.carPlateDetect(formToImage(file, 320, 320));
+            var resultMap = formToImage(file, 320, 320);
+            var detect = detectModel.carPlateDetect(resultMap.resized, resultMap.raw);
 
             var plate = ocrModel.carPlateRecognize(detect.plateImage);
 
@@ -63,7 +65,9 @@ public class DetectController {
     public Object parkingStatusRecognize(@RequestParam("file") MultipartFile file) throws Exception {
         return executor.submit(() -> {
             var begin = System.currentTimeMillis();
-            var status = parkingStatusModel.predict(formToImage(file, 96, 96));
+            var result = formToImage(file, 96, 96);
+            result.raw.release();
+            var status = parkingStatusModel.predict(result.resized);
             return result(new ParkingStateResult(status, System.currentTimeMillis() - begin));
         }).get();
     }

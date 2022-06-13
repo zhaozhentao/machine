@@ -4,10 +4,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import machine.entity.DetectResult;
 import machine.extend.AutoCloseMat;
 import machine.helper.TensorflowHelper;
-import org.opencv.core.CvType;
-import org.opencv.core.MatOfPoint2f;
-import org.opencv.core.Point;
-import org.opencv.core.Size;
+import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.springframework.stereotype.Component;
@@ -19,12 +16,11 @@ public class DetectModel extends BaseModel {
         super("models/detect.pb");
     }
 
-    public DetectResult carPlateDetect(AutoCloseMat[] images) {
+    public DetectResult carPlateDetect(AutoCloseMat resized, Mat raw) {
         var IMG_SIZE = 320;
         var PLATE_HEIGHT = 50;
         try (
-            var resizeImage = images[0];
-            var rawImage = images[1];
+            var resizeImage = resized;
             var image = TensorflowHelper.openCVImage2Tensor(resizeImage, 255);
             var resultTensor = s.runner().feed("Input", image).fetch("Identity").run().get(0)
         ) {
@@ -33,8 +29,8 @@ public class DetectModel extends BaseModel {
 
             for (var i = 0; i < coordinates.length; i++) coordinates[i] *= IMG_SIZE;
 
-            var width = rawImage.width();
-            var height = rawImage.height();
+            var width = raw.width();
+            var height = raw.height();
             var leftTop = new Point(coordinates[0] * width / IMG_SIZE, coordinates[1] * height / IMG_SIZE);
             var rightTop = new Point(coordinates[6] * width / IMG_SIZE, coordinates[7] * height / IMG_SIZE);
             var leftBottom = new Point(coordinates[2] * width / IMG_SIZE, coordinates[3] * height / IMG_SIZE);
@@ -46,15 +42,11 @@ public class DetectModel extends BaseModel {
             );
 
             var plateImage = new AutoCloseMat(144, PLATE_HEIGHT, CvType.CV_8UC3);
-            Imgproc.warpPerspective(rawImage, plateImage, transform, new Size(144, PLATE_HEIGHT));
+            Imgproc.warpPerspective(raw, plateImage, transform, new Size(144, PLATE_HEIGHT));
+            raw.release();
+            Imgcodecs.imwrite("./tmp.jpg", plateImage);
 
-            var bgrPlateImage = new AutoCloseMat();
-            Imgproc.cvtColor(plateImage, bgrPlateImage, Imgproc.COLOR_RGB2BGR);
-            plateImage.release();
-
-            Imgcodecs.imwrite("./tmp.jpg", bgrPlateImage);
-
-            return new DetectResult(leftTop, rightTop, leftBottom, rightBottom, bgrPlateImage);
+            return new DetectResult(leftTop, rightTop, leftBottom, rightBottom, plateImage);
         }
     }
 }
